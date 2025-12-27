@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="post-form-container">
+        <h2>Post a Note</h2>
+        <form action="/post" method="post">
+            <div class="form-group">
+                <label for="nsec">Private Key (nsec):</label>
+                <input type="password" id="nsec" name="nsec" required placeholder="nsec1...">
+                <small>Required to sign the event. Not stored on server (ideally).</small>
+            </div>
+            <div class="form-group">
+                <label for="content">Message:</label>
+                <textarea id="content" name="content" rows="4" required placeholder="What's happening?"></textarea>
+            </div>
+            <button type="submit">Publish</button>
+        </form>
+    </div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="feed">
+        <h2>Global Feed</h2>
+        {% for note in events %}
+        <div class="note">
+            <div class="note-meta">
+                <span class="author" title="{{ note.pubkey }}">Author: {{ note.pubkey[:8] }}...</span>
+                <span class="date">{{ note.timestamp }}</span>
+            </div>
+            <div class="note-content">
+                {{ note.content }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% endblock %}
