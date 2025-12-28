@@ -1,6 +1,7 @@
-from nostr_sdk import Client, Filter, Kind, Timestamp, Keys, NostrSigner, EventBuilder, RelayUrl
+from nostr_sdk import Client, Filter, Kind, Timestamp, Keys, NostrSigner, EventBuilder, RelayUrl, PublicKey
 import asyncio
-from typing import List
+import json
+from typing import List, Optional, Dict
 from datetime import timedelta
 
 class NostrManager:
@@ -10,7 +11,10 @@ class NostrManager:
         self.relays = [
             "wss://relay.damus.io",
             "wss://nos.lol",
-            "wss://relay.primal.net"
+            "wss://relay.primal.net",
+            "wss://relay.snort.social",
+            "wss://relay.current.fyi",
+            "wss://relay.nostr.band"
         ]
         self.connected = False
 
@@ -30,14 +34,70 @@ class NostrManager:
             "timestamp": event.created_at().to_human_datetime() 
         }
 
-    async def get_global_feed(self, limit: int = 20):
+    async def get_global_feed(self, limit: int = 20, until: Optional[int] = None):
         await self.start()
         # Filter for text notes (Kind 1)
         f = Filter().kind(Kind(1)).limit(limit)
-        # Fetch events from relays (timeout of 5 seconds)
-        # fetch_events takes (filter, timeout) - passing single filter
+        if until:
+            f = f.until(Timestamp.from_secs(until))
+            
         events = await self.client.fetch_events(f, timedelta(seconds=5))
-        # Sort by created_at descending
+        sorted_events = sorted(events.to_vec(), key=lambda x: x.created_at().as_secs(), reverse=True)
+        return [self._event_to_dict(e) for e in sorted_events]
+    
+    async def get_following_list(self, pubkey_hex: str) -> List[str]:
+        await self.start()
+        try:
+            print(f"Fetching contact list for {pubkey_hex}")
+            pk = PublicKey.parse(pubkey_hex)
+            
+            # Fetch Kind 3 (Contact List)
+            f = Filter().kind(Kind(3)).author(pk).limit(1)
+            
+            events = await self.client.fetch_events(f, timedelta(seconds=10))
+            print(f"Found {events.len()} contact list events")
+            
+            followed_pubkeys = set()
+            
+            for event in events.to_vec():
+                # For each event, extract 'p' tags
+                for tag in event.tags():
+                    t = tag.as_vec()
+                    # Check for "p" tag
+                    if len(t) >= 2 and t[0] == "p":
+                        followed_pubkeys.add(t[1])
+            
+            print(f"Found {len(followed_pubkeys)} unique followed users")
+            return list(followed_pubkeys)
+        except Exception as e:
+            print(f"Error fetching contact list: {e}")
+            return []
+
+    async def get_feed(self, authors: List[str], limit: int = 20, until: Optional[int] = None):
+        await self.start()
+        if not authors:
+            return []
+            
+        # Limit authors to avoid filter too large errors
+        # Many relays reject filters with more than a few hundred authors
+        authors = authors[:250]
+
+        public_keys = []
+        for author in authors:
+            try:
+                public_keys.append(PublicKey.parse(author))
+            except:
+                continue
+                
+        if not public_keys:
+            return []
+
+        f = Filter().kind(Kind(1)).authors(public_keys).limit(limit)
+        
+        if until:
+            f = f.until(Timestamp.from_secs(until))
+
+        events = await self.client.fetch_events(f, timedelta(seconds=5))
         sorted_events = sorted(events.to_vec(), key=lambda x: x.created_at().as_secs(), reverse=True)
         return [self._event_to_dict(e) for e in sorted_events]
 
@@ -59,5 +119,66 @@ class NostrManager:
         await pub_client.send_event_builder(builder)
         # We might want to keep this client alive if we expect more posts, but for now close it or let it be collected.
         # Ideally we should maintain a persistent authenticated client if the user "logs in".
+
+    async def get_followers_list(self, pubkey_hex: str) -> List[str]:
+        await self.start()
+        try:
+            print(f"Fetching followers for {pubkey_hex}")
+            pk = PublicKey.parse(pubkey_hex)
+            
+            # Fetch Kind 3 events where 'p' tag is the user's pubkey
+            # This indicates people who have this user in their contact list
+            f = Filter().kind(Kind(3)).p_tag([pk]).limit(100)
+            
+            events = await self.client.fetch_events(f, timedelta(seconds=10))
+            print(f"Found {events.len()} potential follower events")
+            
+            followers = set()
+            for event in events.to_vec():
+                followers.add(event.author().to_hex())
+                
+            print(f"Found {len(followers)} unique followers")
+            return list(followers)
+        except Exception as e:
+            print(f"Error fetching followers list: {e}")
+            return []
+
+    async def get_profiles(self, pubkeys: List[str]) -> Dict[str, dict]:
+        await self.start()
+        if not pubkeys:
+            return {}
+
+        # Limit to avoid huge filters
+        pubkeys = pubkeys[:250]
+        
+        pks = []
+        for pk in pubkeys:
+            try:
+                pks.append(PublicKey.parse(pk))
+            except:
+                continue
+                
+        if not pks:
+            return {}
+
+        # Kind 0 is Metadata
+        f = Filter().kind(Kind(0)).authors(pks)
+        
+        # We don't need history, just latest, but relays might send multiples.
+        # We can handle deduping in python.
+        events = await self.client.fetch_events(f, timedelta(seconds=5))
+        
+        profiles = {}
+        # Sort by created_at ascending so we overwrite with newer data
+        sorted_events = sorted(events.to_vec(), key=lambda x: x.created_at().as_secs())
+        
+        for event in sorted_events:
+            try:
+                content = json.loads(event.content())
+                profiles[event.author().to_hex()] = content
+            except:
+                continue
+                
+        return profiles
 
 nostr_manager = NostrManager()

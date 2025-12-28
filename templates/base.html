@@ -9,11 +9,13 @@
 <body>
     <div class="app-layout">
         <aside class="sidebar">
-            <div class="sidebar-header">
-                <h1><a href="/">SubNostr</a></h1>
-            </div>
             <nav>
-                <a href="/" class="nav-item">Global Feed</a>
+                {% if logged_in %}
+                    <a href="/feed" class="nav-item">My Feed</a>
+                    <a href="/following" class="nav-item">Following</a>
+                    <a href="/followers" class="nav-item">Followers</a>
+                {% endif %}
+                <a href="/global" class="nav-item">Global Feed</a>
                 <a href="/post" class="nav-item">Post</a>
                 {% if logged_in %}
                     <a href="/logout" class="nav-item">Logout</a>
