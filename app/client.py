@@ -100,7 +100,9 @@ class NostrManager:
 
         events = await self.client.fetch_events(f, timedelta(seconds=5))
         enriched = await self._enrich_events(events.to_vec())
-        return await self._enrich_with_reply_counts(enriched)
+        enriched = enriched[:limit]
+        with_parents = await self._enrich_with_parents(enriched)
+        return await self._enrich_with_reply_counts(with_parents)
 
     async def get_following_list(self, pubkey_hex: str) -> List[str]:
         await self.start()
