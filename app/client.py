@@ -165,7 +165,20 @@ class NostrManager:
             f = f.until(Timestamp.from_secs(until))
 
         events = await self.client.fetch_events(f, timedelta(seconds=5))
-        enriched = await self._enrich_events(events.to_vec())
+
+        # Filter out replies (events with 'e' tags)
+        filtered_events = []
+        for event in events.to_vec():
+            has_e_tag = False
+            for tag in event.tags().to_vec():
+                t = tag.as_vec()
+                if len(t) >= 1 and t[0] == "e":
+                    has_e_tag = True
+                    break
+            if not has_e_tag:
+                filtered_events.append(event)
+
+        enriched = await self._enrich_events(filtered_events)
         return await self._enrich_with_reply_counts(enriched)
 
     async def get_events(self, event_ids: List[str]) -> Dict[str, dict]:
