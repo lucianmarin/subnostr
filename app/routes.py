@@ -73,38 +73,6 @@ async def user_feed(request: Request, until: Optional[int] = None):
             "error": str(e)
         })
 
-@router.get("/replies")
-async def replies_feed(request: Request, until: Optional[int] = None):
-    ctx = await get_context(request)
-    if not ctx["logged_in"]:
-        return RedirectResponse(url="/global", status_code=303)
-
-    try:
-        pubkey = ctx["user_pubkey"]
-        following = await nostr_manager.get_following_list(pubkey)
-        following.append(pubkey)
-
-        events = await nostr_manager.get_replies_feed(following, limit=20, until=until)
-
-        next_until = None
-        if events:
-            next_until = events[-1]["created_at"] - 1
-
-        return templates.TemplateResponse("index.html", {
-            **ctx,
-            "events": events,
-            "title": "Replies",
-            "next_until": next_until
-        })
-    except Exception as e:
-        print(f"Error fetching replies feed: {e}")
-        return templates.TemplateResponse("index.html", {
-            **ctx,
-            "events": [],
-            "title": "Replies (Error)",
-            "error": str(e)
-        })
-
 @router.get("/notifications")
 async def notifications_page(request: Request, until: Optional[int] = None):
     ctx = await get_context(request)

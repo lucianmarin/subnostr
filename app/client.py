@@ -165,20 +165,9 @@ class NostrManager:
 
         events = await self.client.fetch_events(f, timedelta(seconds=5))
 
-        # Filter out replies (events with 'e' tags)
-        filtered_events = []
-        for event in events.to_vec():
-            has_e_tag = False
-            for tag in event.tags().to_vec():
-                t = tag.as_vec()
-                if len(t) >= 1 and t[0] == "e":
-                    has_e_tag = True
-                    break
-            if not has_e_tag:
-                filtered_events.append(event)
-
-        enriched = await self._enrich_events(filtered_events)
-        return await self._enrich_with_reply_counts(enriched)
+        enriched = await self._enrich_events(events.to_vec())
+        with_parents = await self._enrich_with_parents(enriched)
+        return await self._enrich_with_reply_counts(with_parents)
 
     async def get_events(self, event_ids: List[str]) -> Dict[str, dict]:
         await self.start()
@@ -204,49 +193,6 @@ class NostrManager:
             results[e.id().to_hex()] = self._event_to_dict(e)
 
         return results
-
-    async def get_replies_feed(self, authors: List[str], limit: int = 20, until: Optional[int] = None):
-        await self.start()
-        if not authors:
-            return []
-
-        authors = authors[:250]
-        public_keys = []
-        for author in authors:
-            try:
-                public_keys.append(PublicKey.parse(author))
-            except:
-                continue
-
-        if not public_keys:
-            return []
-
-        # Fetch more to account for filtering
-        fetch_limit = limit * 4
-        f = Filter().kind(Kind(1)).authors(public_keys).limit(fetch_limit)
-
-        if until:
-            f = f.until(Timestamp.from_secs(until))
-
-        events = await self.client.fetch_events(f, timedelta(seconds=5))
-
-        # Filter for replies (has 'e' tag)
-        reply_events = []
-        for event in events.to_vec():
-            is_reply = False
-            for tag in event.tags().to_vec():
-                t = tag.as_vec()
-                if len(t) >= 1 and t[0] == "e":
-                    is_reply = True
-                    break
-            if is_reply:
-                reply_events.append(event)
-
-        # Enrich and return only the requested limit
-        enriched = await self._enrich_events(reply_events)
-        results = enriched[:limit]
-        with_parents = await self._enrich_with_parents(results)
-        return await self._enrich_with_reply_counts(with_parents)
 
     async def _enrich_with_parents(self, results):
         if not results:
