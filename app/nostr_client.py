@@ -1,4 +1,4 @@
-from nostr_sdk import Client, Filter, Kind, Timestamp, Keys, NostrSigner, EventBuilder, RelayUrl, PublicKey, Tag
+from nostr_sdk import Client, Filter, Kind, Timestamp, Keys, NostrSigner, EventBuilder, RelayUrl, PublicKey, Tag, EventId
 import asyncio
 import json
 from typing import List, Optional, Dict
@@ -26,13 +26,36 @@ class NostrManager:
             self.connected = True
 
     def _event_to_dict(self, event):
+        tags = []
+        for tag in event.tags().to_vec():
+            tags.append(tag.as_vec())
+            
         return {
             "id": event.id().to_hex(),
             "content": event.content(),
             "pubkey": event.author().to_hex(),
             "created_at": event.created_at().as_secs(),
-            "timestamp": event.created_at().to_human_datetime() 
+            "timestamp": event.created_at().to_human_datetime(),
+            "tags": tags
         }
+
+    async def _enrich_events(self, events_vec):
+        sorted_events = sorted(events_vec, key=lambda x: x.created_at().as_secs(), reverse=True)
+        
+        # Enrich with profiles
+        pubkeys = list(set([e.author().to_hex() for e in sorted_events]))
+        profiles = await self.get_profiles(pubkeys)
+        
+        results = []
+        for e in sorted_events:
+            data = self._event_to_dict(e)
+            author_pk = data["pubkey"]
+            if author_pk in profiles:
+                p = profiles[author_pk]
+                data["author_name"] = p.get("display_name") or p.get("name")
+                data["author_picture"] = p.get("picture")
+            results.append(data)
+        return results
 
     async def get_global_feed(self, limit: int = 20, until: Optional[int] = None):
         await self.start()
@@ -42,8 +65,7 @@ class NostrManager:
             f = f.until(Timestamp.from_secs(until))
             
         events = await self.client.fetch_events(f, timedelta(seconds=5))
-        sorted_events = sorted(events.to_vec(), key=lambda x: x.created_at().as_secs(), reverse=True)
-        return [self._event_to_dict(e) for e in sorted_events]
+        return await self._enrich_events(events.to_vec())
     
     async def get_following_list(self, pubkey_hex: str) -> List[str]:
         await self.start()
@@ -104,8 +126,145 @@ class NostrManager:
             f = f.until(Timestamp.from_secs(until))
 
         events = await self.client.fetch_events(f, timedelta(seconds=5))
-        sorted_events = sorted(events.to_vec(), key=lambda x: x.created_at().as_secs(), reverse=True)
-        return [self._event_to_dict(e) for e in sorted_events]
+        return await self._enrich_events(events.to_vec())
+
+    async def get_events(self, event_ids: List[str]) -> Dict[str, dict]:
+        await self.start()
+        if not event_ids:
+            return {}
+        
+        event_ids = list(set(event_ids))
+        ids = []
+        for eid in event_ids:
+            try:
+                ids.append(EventId.parse(eid))
+            except:
+                continue
+        
+        if not ids:
+            return {}
+
+        f = Filter().ids(ids)
+        events = await self.client.fetch_events(f, timedelta(seconds=5))
+        
+        results = {}
+        for e in events.to_vec():
+            results[e.id().to_hex()] = self._event_to_dict(e)
+            
+        return results
+
+    async def get_replies_feed(self, authors: List[str], limit: int = 20, until: Optional[int] = None):
+        await self.start()
+        if not authors:
+            return []
+            
+        authors = authors[:250]
+        public_keys = []
+        for author in authors:
+            try:
+                public_keys.append(PublicKey.parse(author))
+            except:
+                continue
+                
+        if not public_keys:
+            return []
+
+        # Fetch more to account for filtering
+        fetch_limit = limit * 4
+        f = Filter().kind(Kind(1)).authors(public_keys).limit(fetch_limit)
+        
+        if until:
+            f = f.until(Timestamp.from_secs(until))
+
+        events = await self.client.fetch_events(f, timedelta(seconds=5))
+        
+        # Filter for replies (has 'e' tag)
+        reply_events = []
+        for event in events.to_vec():
+            is_reply = False
+            for tag in event.tags().to_vec():
+                t = tag.as_vec()
+                if len(t) >= 1 and t[0] == "e":
+                    is_reply = True
+                    break
+            if is_reply:
+                reply_events.append(event)
+        
+        # Enrich and return only the requested limit
+        enriched = await self._enrich_events(reply_events)
+        results = enriched[:limit]
+        return await self._enrich_with_parents(results)
+
+    async def _enrich_with_parents(self, results):
+        if not results:
+            return results
+
+        # Fetch parents
+        parent_ids_map = {} # note_id -> parent_id
+        all_parent_ids = set()
+
+        for note in results:
+            parent_id = None
+            e_tags = [t for t in note.get('tags', []) if t[0] == 'e']
+            
+            # NIP-10 logic: prefer 'reply' marker, else last 'e' tag
+            found_marker = False
+            for t in e_tags:
+                if len(t) >= 4 and t[3] == 'reply':
+                    parent_id = t[1]
+                    found_marker = True
+                    break
+            
+            if not found_marker and e_tags:
+                parent_id = e_tags[-1][1]
+            
+            if parent_id:
+                parent_ids_map[note['id']] = parent_id
+                all_parent_ids.add(parent_id)
+
+        if all_parent_ids:
+            parents = await self.get_events(list(all_parent_ids))
+            
+            # Fetch parent authors profiles
+            parent_pubkeys = set()
+            for p in parents.values():
+                parent_pubkeys.add(p['pubkey'])
+            
+            if parent_pubkeys:
+                parent_profiles = await self.get_profiles(list(parent_pubkeys))
+
+                # Enrich parents with profiles
+                for pid, p_data in parents.items():
+                    p_pk = p_data['pubkey']
+                    if p_pk in parent_profiles:
+                        prof = parent_profiles[p_pk]
+                        p_data["author_name"] = prof.get("display_name") or prof.get("name")
+                        p_data["author_picture"] = prof.get("picture")
+
+            # Attach to results
+            for note in results:
+                pid = parent_ids_map.get(note['id'])
+                if pid and pid in parents:
+                    note['parent_post'] = parents[pid]
+
+        return results
+
+    async def get_user_posts(self, pubkey_hex: str, limit: int = 20, until: Optional[int] = None):
+        await self.start()
+        try:
+            pk = PublicKey.parse(pubkey_hex)
+            f = Filter().kind(Kind(1)).author(pk).limit(limit)
+            if until:
+                f = f.until(Timestamp.from_secs(until))
+                
+            events = await self.client.fetch_events(f, timedelta(seconds=5))
+            enriched = await self._enrich_events(events.to_vec())
+            return await self._enrich_with_parents(enriched)
+        except Exception as e:
+            print(f"Error fetching user posts: {e}")
+            return []
+
+
 
     async def publish_note(self, content: str, keys: Keys):
         # Create a new client with the signer for this operation

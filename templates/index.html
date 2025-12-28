@@ -3,6 +3,27 @@
 {% block content %}
     <div class="feed">
         <h2>{{ title }}</h2>
+
+        {% if profile %}
+        <div class="profile-header">
+            {% if profile.picture %}
+                <img src="{{ profile.picture }}" class="profile-avatar-large" alt="Avatar">
+            {% else %}
+                <div class="profile-avatar-large-placeholder">{{ pubkey[:2] }}</div>
+            {% endif %}
+            <div class="profile-info-main">
+                <div class="profile-name-large">{{ profile.display_name or profile.name or pubkey[:8] }}</div>
+                <div class="profile-pubkey-small">{{ pubkey }}</div>
+                {% if profile.about %}
+                    <div class="profile-bio">{{ profile.about }}</div>
+                {% endif %}
+                {% if profile.website %}
+                    <div class="profile-website"><a href="{{ profile.website }}" target="_blank" rel="noopener noreferrer">{{ profile.website }}</a></div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
         {% if error %}
             <p style="color: red; padding: 10px; border: 1px solid red; border-radius: 4px;">{{ error }}</p>
         {% endif %}
@@ -13,12 +34,51 @@
 
         {% for note in events %}
         <div class="note">
-            <div class="note-meta">
-                <span class="author" title="{{ note.pubkey }}">Author: {{ note.pubkey[:8] }}...</span>
-                <span class="date">{{ note.timestamp }}</span>
+            {% if note.parent_post %}
+            <div class="parent-note">
+                <div class="parent-note-header">
+                    <span style="margin-right: 5px;">Replying to</span>
+                    <a href="/profile/{{ note.parent_post.pubkey }}" style="display: flex; align-items: center; text-decoration: none; color: inherit;">
+                        {% if note.parent_post.author_picture %}
+                            <img src="{{ note.parent_post.author_picture }}" class="parent-avatar-small" alt="Avatar">
+                        {% endif %}
+                        <span class="parent-author-name">
+                            {% if note.parent_post.author_name %}
+                                {{ note.parent_post.author_name }}
+                            {% else %}
+                                {{ note.parent_post.pubkey[:8] }}...
+                            {% endif %}
+                        </span>
+                    </a>
+                </div>
+                <div class="parent-note-content">{{ note.parent_post.content | linkify_images | safe }}</div>
+            </div>
+            {% endif %}
+            <div class="note-header">
+                <a href="/profile/{{ note.pubkey }}">
+                    {% if note.author_picture %}
+                        <img src="{{ note.author_picture }}" class="note-avatar" alt="Avatar" loading="lazy">
+                    {% else %}
+                        <div class="note-avatar-placeholder">
+                            {{ note.pubkey[:2] }}
+                        </div>
+                    {% endif %}
+                </a>
+                <div class="note-info">
+                    <a href="/profile/{{ note.pubkey }}" style="text-decoration: none;">
+                        <span class="note-author-name" title="{{ note.pubkey }}">
+                            {% if note.author_name %}
+                                {{ note.author_name }}
+                            {% else %}
+                                {{ note.pubkey[:8] }}...
+                            {% endif %}
+                        </span>
+                    </a>
+                    <span class="note-date" title="{{ note.timestamp }}">{{ note.created_at | time_ago }}</span>
+                </div>
             </div>
             <div class="note-content">
-                {{ note.content }}
+                {{ note.content | linkify_images | safe }}
             </div>
         </div>
         {% endfor %}

@@ -6,6 +6,8 @@ from app.nostr_client import nostr_manager
 from nostr_sdk import Keys
 from contextlib import asynccontextmanager
 from typing import Optional
+from datetime import datetime, timezone
+import re
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -17,6 +19,52 @@ app = FastAPI(lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+def time_ago(timestamp: int) -> str:
+    now = datetime.now(timezone.utc).timestamp()
+    diff = now - timestamp
+
+    if diff < 60:
+        return f"{int(diff)}s ago" if diff > 1 else "just now"
+    
+    minutes = diff / 60
+    if minutes < 60:
+        return f"{int(minutes)}m ago"
+    
+    hours = minutes / 60
+    if hours < 24:
+        return f"{int(hours)}h ago"
+    
+    days = hours / 24
+    if days < 7:
+        return f"{int(days)}d ago"
+    
+    weeks = days / 7
+    if weeks < 4:
+        return f"{int(weeks)}w ago"
+    
+    months = days / 30.44  # Average month length
+    if months < 12:
+        return f"{int(months)}mo ago"
+    
+    years = days / 365.25
+    return f"{int(years)}y ago"
+
+def linkify_images(text: str) -> str:
+    if not text:
+        return ""
+    # Regex to find URLs ending with image extensions
+    # Updated to include .gif
+    url_pattern = r'(https?://\S+\.(?:jpg|jpeg|png|gif))(?:\s|$)'
+    
+    def replace_with_img(match):
+        url = match.group(1)
+        return f'<br><img src="{url}" style="max-width: 100%; border-radius: 5px; margin-top: 10px;" loading="lazy"><br>'
+
+    return re.sub(url_pattern, replace_with_img, text, flags=re.IGNORECASE)
+
+templates.env.filters["linkify_images"] = linkify_images
+templates.env.filters["time_ago"] = time_ago
 
 @app.get("/")
 async def index(request: Request):
@@ -86,6 +134,72 @@ async def user_feed(request: Request, until: Optional[int] = None):
             "title": "Global Feed (Error loading your feed)",
             "error": str(e)
         })
+
+@app.get("/replies")
+async def replies_feed(request: Request, until: Optional[int] = None):
+    user_nsec = request.cookies.get("user_nsec")
+    if not user_nsec:
+        return RedirectResponse(url="/global", status_code=303)
+
+    try:
+        keys = Keys.parse(user_nsec)
+        pubkey = keys.public_key().to_hex()
+
+        following = await nostr_manager.get_following_list(pubkey)
+        # Include self in the feed as well
+        following.append(pubkey)
+
+        events = await nostr_manager.get_replies_feed(following, limit=20, until=until)
+
+        # Determine next page cursor
+        next_until = None
+        if events:
+            next_until = events[-1]["created_at"] - 1
+
+        return templates.TemplateResponse("index.html", {
+            "request": request,
+            "events": events,
+            "logged_in": True,
+            "title": "Replies",
+            "next_until": next_until
+        })
+    except Exception as e:
+        print(f"Error fetching replies feed: {e}")
+        return templates.TemplateResponse("index.html", {
+            "request": request,
+            "events": [],
+            "logged_in": True,
+            "title": "Replies (Error)",
+            "error": str(e)
+        })
+
+@app.get("/profile/{pubkey}")
+async def user_profile(request: Request, pubkey: str, until: Optional[int] = None):
+    user_nsec = request.cookies.get("user_nsec")
+    
+    # Fetch profile metadata
+    profiles = await nostr_manager.get_profiles([pubkey])
+    profile = profiles.get(pubkey, {})
+    
+    # Fetch user posts (threads + replies)
+    events = await nostr_manager.get_user_posts(pubkey, limit=20, until=until)
+    
+    # Determine next page cursor
+    next_until = None
+    if events:
+        next_until = events[-1]["created_at"] - 1
+        
+    display_name = profile.get("display_name") or profile.get("name") or f"{pubkey[:8]}..."
+    
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "events": events,
+        "profile": profile,
+        "pubkey": pubkey,
+        "logged_in": user_nsec is not None,
+        "title": f"Profile: {display_name}",
+        "next_until": next_until
+    })
 
 @app.get("/following")
 async def following_page(request: Request):
