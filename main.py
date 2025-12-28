@@ -29,17 +29,17 @@ async def index(request: Request):
 async def global_feed(request: Request, until: Optional[int] = None):
     user_nsec = request.cookies.get("user_nsec")
     events = await nostr_manager.get_global_feed(limit=20, until=until)
-    
+
     # Update: Let's actually use get_feed with empty authors or a specialized method if needed
     # For now, get_global_feed doesn't support 'until'. I should fix that in nostr_client.
-    
+
     # Re-using the logic from user_feed for consistency
     next_until = None
     if events:
         next_until = events[-1]["created_at"] - 1
 
     return templates.TemplateResponse("index.html", {
-        "request": request, 
+        "request": request,
         "events": events,
         "logged_in": user_nsec is not None,
         "title": "Global Feed",
@@ -51,17 +51,17 @@ async def user_feed(request: Request, until: Optional[int] = None):
     user_nsec = request.cookies.get("user_nsec")
     if not user_nsec:
         return RedirectResponse(url="/global", status_code=303)
-    
+
     try:
         keys = Keys.parse(user_nsec)
         pubkey = keys.public_key().to_hex()
-        
+
         following = await nostr_manager.get_following_list(pubkey)
         # Include self in the feed as well
         following.append(pubkey)
-        
+
         events = await nostr_manager.get_feed(following, limit=20, until=until)
-        
+
         # Determine next page cursor
         next_until = None
         if events:
@@ -80,7 +80,7 @@ async def user_feed(request: Request, until: Optional[int] = None):
         print(f"Error fetching feed: {e}")
         events = await nostr_manager.get_global_feed()
         return templates.TemplateResponse("index.html", {
-            "request": request, 
+            "request": request,
             "events": events,
             "logged_in": True,
             "title": "Global Feed (Error loading your feed)",
@@ -92,28 +92,28 @@ async def following_page(request: Request):
     user_nsec = request.cookies.get("user_nsec")
     if not user_nsec:
         return RedirectResponse(url="/login", status_code=303)
-        
+
     try:
         keys = Keys.parse(user_nsec)
         pubkey = keys.public_key().to_hex()
-        
+
         # Get list of followed pubkeys
         following_pubkeys = await nostr_manager.get_following_list(pubkey)
-        
+
         # Fetch profiles for these pubkeys
         profiles = await nostr_manager.get_profiles(following_pubkeys)
-        
+
         # Ensure we have entries for all followed users even if metadata fetch failed
         # Sort by name/display_name for better UX
         sorted_profiles = {}
-        
+
         # Sort list by name, prioritizing display_name -> name -> pubkey
         def get_name(pk):
             p = profiles.get(pk, {})
             return p.get("display_name") or p.get("name") or pk
 
         sorted_pubkeys = sorted(following_pubkeys, key=get_name)
-        
+
         for pk in sorted_pubkeys:
             sorted_profiles[pk] = profiles.get(pk, {})
 
@@ -137,17 +137,17 @@ async def followers_page(request: Request):
     user_nsec = request.cookies.get("user_nsec")
     if not user_nsec:
         return RedirectResponse(url="/login", status_code=303)
-        
+
     try:
         keys = Keys.parse(user_nsec)
         pubkey = keys.public_key().to_hex()
-        
+
         # Get list of follower pubkeys
         follower_pubkeys = await nostr_manager.get_followers_list(pubkey)
-        
+
         # Fetch profiles for these pubkeys
         profiles = await nostr_manager.get_profiles(follower_pubkeys)
-        
+
         # Sort logic (same as following)
         sorted_profiles = {}
         def get_name(pk):
@@ -155,7 +155,7 @@ async def followers_page(request: Request):
             return p.get("display_name") or p.get("name") or pk
 
         sorted_pubkeys = sorted(follower_pubkeys, key=get_name)
-        
+
         for pk in sorted_pubkeys:
             sorted_profiles[pk] = profiles.get(pk, {})
 
@@ -185,7 +185,7 @@ async def post_page(request: Request):
 @app.post("/post")
 async def post_submit(request: Request, content: str = Form(...), nsec: Optional[str] = Form(None)):
     user_nsec = nsec or request.cookies.get("user_nsec")
-    
+
     if not user_nsec:
         return templates.TemplateResponse("post.html", {
             "request": request,

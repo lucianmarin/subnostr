@@ -1,4 +1,4 @@
-from nostr_sdk import Client, Filter, Kind, Timestamp, Keys, NostrSigner, EventBuilder, RelayUrl, PublicKey
+from nostr_sdk import Client, Filter, Kind, Timestamp, Keys, NostrSigner, EventBuilder, RelayUrl, PublicKey, Tag
 import asyncio
 import json
 from typing import List, Optional, Dict
@@ -50,23 +50,29 @@ class NostrManager:
         try:
             print(f"Fetching contact list for {pubkey_hex}")
             pk = PublicKey.parse(pubkey_hex)
-            
-            # Fetch Kind 3 (Contact List)
-            f = Filter().kind(Kind(3)).author(pk).limit(1)
-            
+
+            # Fetch Kind 3 (Contact List) - remove limit to get all and find the latest
+            f = Filter().kind(Kind(3)).author(pk)
+
             events = await self.client.fetch_events(f, timedelta(seconds=10))
             print(f"Found {events.len()} contact list events")
-            
+
+            if events.len() == 0:
+                return []
+
+            # Find the most recent contact list event
+            latest_event = max(events.to_vec(), key=lambda e: e.created_at().as_secs())
+
             followed_pubkeys = set()
-            
-            for event in events.to_vec():
-                # For each event, extract 'p' tags
-                for tag in event.tags():
-                    t = tag.as_vec()
-                    # Check for "p" tag
-                    if len(t) >= 2 and t[0] == "p":
-                        followed_pubkeys.add(t[1])
-            
+
+            # Extract 'p' tags from the latest event
+            tags = latest_event.tags().to_vec()
+            for tag in tags:
+                t = tag.as_vec()
+                # Check for "p" tag
+                if len(t) >= 2 and t[0] == "p":
+                    followed_pubkeys.add(t[1])
+
             print(f"Found {len(followed_pubkeys)} unique followed users")
             return list(followed_pubkeys)
         except Exception as e:
@@ -115,7 +121,7 @@ class NostrManager:
             await pub_client.add_relay(RelayUrl.parse(relay))
         await pub_client.connect()
         
-        builder = EventBuilder.text_note(content, [])
+        builder = EventBuilder.text_note(content)
         await pub_client.send_event_builder(builder)
         # We might want to keep this client alive if we expect more posts, but for now close it or let it be collected.
         # Ideally we should maintain a persistent authenticated client if the user "logs in".
@@ -125,19 +131,34 @@ class NostrManager:
         try:
             print(f"Fetching followers for {pubkey_hex}")
             pk = PublicKey.parse(pubkey_hex)
-            
-            # Fetch Kind 3 events where 'p' tag is the user's pubkey
-            # This indicates people who have this user in their contact list
-            f = Filter().kind(Kind(3)).p_tag([pk]).limit(100)
-            
+
+            # Fetch all Kind 3 events (contact lists)
+            f = Filter().kind(Kind(3))
+
             events = await self.client.fetch_events(f, timedelta(seconds=10))
-            print(f"Found {events.len()} potential follower events")
-            
-            followers = set()
+            print(f"Found {events.len()} contact list events")
+
+            # Group events by author and find the latest for each
+            author_events = {}
             for event in events.to_vec():
-                followers.add(event.author().to_hex())
-                
-            print(f"Found {len(followers)} unique followers")
+                author = event.author().to_hex()
+                if author not in author_events:
+                    author_events[author] = event
+                else:
+                    if event.created_at().as_secs() > author_events[author].created_at().as_secs():
+                        author_events[author] = event
+
+            followers = set()
+            for author, event in author_events.items():
+                # Check if the latest contact list has the user in p tags
+                tags = event.tags().to_vec()
+                for tag in tags:
+                    t = tag.as_vec()
+                    if len(t) >= 2 and t[0] == "p" and t[1] == pk.to_hex():
+                        followers.add(author)
+                        break
+
+            print(f"Found {len(followers)} current followers")
             return list(followers)
         except Exception as e:
             print(f"Error fetching followers list: {e}")
