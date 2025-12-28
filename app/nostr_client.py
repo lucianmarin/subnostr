@@ -452,9 +452,96 @@ class NostrManager:
             except Exception as e:
                 print(f"Error preparing reply tags: {e}")
 
-        builder = EventBuilder.text_note(content, tags)
-        await pub_client.send_event_builder(builder)
+        event = EventBuilder.text_note(content).tags(tags).sign_with_keys(keys)
+        event_id = await pub_client.send_event(event)
+        print(f"Published note: {event_id.to_hex()}")
         await pub_client.disconnect()
+
+    async def follow(self, keys: Keys, follow_pubkey_hex: str):
+        print(f"Follow request for {follow_pubkey_hex}")
+        # 1. Fetch current contact list
+        user_pubkey = keys.public_key().to_hex()
+        pk = PublicKey.parse(user_pubkey)
+        f = Filter().kind(Kind(3)).author(pk)
+        events = await self.client.fetch_events(f, timedelta(seconds=10))
+        
+        tags = []
+        content = ""
+        if events.len() > 0:
+            latest_event = max(events.to_vec(), key=lambda e: e.created_at().as_secs())
+            tags = latest_event.tags().to_vec()
+            content = latest_event.content()
+            print(f"Found existing contact list with {len(tags)} tags")
+        else:
+            print("No existing contact list found")
+        
+        # Check if already following
+        already_following = False
+        for tag in tags:
+            t = tag.as_vec()
+            if len(t) >= 2 and t[0] == "p" and t[1] == follow_pubkey_hex:
+                already_following = True
+                break
+        
+        if not already_following:
+            tags.append(Tag.parse(["p", follow_pubkey_hex]))
+            print(f"Added p-tag for {follow_pubkey_hex}")
+            
+            # Publish updated contact list
+            signer = NostrSigner.keys(keys)
+            pub_client = Client(signer)
+            for relay in self.relays:
+                await pub_client.add_relay(RelayUrl.parse(relay))
+            await pub_client.connect()
+            
+            event = EventBuilder(Kind(3), content).tags(tags).sign_with_keys(keys)
+            event_id = await pub_client.send_event(event)
+            print(f"Published follow event: {event_id.to_hex()}")
+            await pub_client.disconnect()
+        else:
+            print(f"Already following {follow_pubkey_hex}")
+
+    async def unfollow(self, keys: Keys, unfollow_pubkey_hex: str):
+        print(f"Unfollow request for {unfollow_pubkey_hex}")
+        # 1. Fetch current contact list
+        user_pubkey = keys.public_key().to_hex()
+        pk = PublicKey.parse(user_pubkey)
+        f = Filter().kind(Kind(3)).author(pk)
+        events = await self.client.fetch_events(f, timedelta(seconds=10))
+        
+        if events.len() == 0:
+            print("No contact list found to unfollow from")
+            return # Nothing to unfollow from
+            
+        latest_event = max(events.to_vec(), key=lambda e: e.created_at().as_secs())
+        old_tags = latest_event.tags().to_vec()
+        content = latest_event.content()
+        print(f"Found existing contact list with {len(old_tags)} tags")
+        
+        new_tags = []
+        found = False
+        for tag in old_tags:
+            t = tag.as_vec()
+            if len(t) >= 2 and t[0] == "p" and t[1] == unfollow_pubkey_hex:
+                found = True
+                continue
+            new_tags.append(tag)
+        
+        if found:
+            print(f"Removed p-tag for {unfollow_pubkey_hex}")
+            # Publish updated contact list
+            signer = NostrSigner.keys(keys)
+            pub_client = Client(signer)
+            for relay in self.relays:
+                await pub_client.add_relay(RelayUrl.parse(relay))
+            await pub_client.connect()
+            
+            event = EventBuilder(Kind(3), content).tags(new_tags).sign_with_keys(keys)
+            event_id = await pub_client.send_event(event)
+            print(f"Published unfollow event: {event_id.to_hex()}")
+            await pub_client.disconnect()
+        else:
+            print(f"Not following {unfollow_pubkey_hex}")
 
     async def get_followers_list(self, pubkey_hex: str) -> List[str]:
         await self.start()

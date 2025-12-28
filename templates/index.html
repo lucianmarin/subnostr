@@ -14,7 +14,20 @@
                 <div class="profile-avatar-large-placeholder">{{ pubkey[:2] }}</div>
             {% endif %}
             <div class="profile-info-main">
-                <div class="profile-name-large">{{ profile.display_name or profile.name or pubkey[:8] }}</div>
+                <div class="profile-name-row">
+                    <div class="profile-name-large">{{ profile.display_name or profile.name or pubkey[:8] }}</div>
+                    {% if logged_in and user_pubkey != pubkey %}
+                        {% if is_following %}
+                            <form action="/unfollow/{{ pubkey }}" method="post" style="display: inline;">
+                                <button type="submit" class="unfollow-button">Unfollow</button>
+                            </form>
+                        {% else %}
+                            <form action="/follow/{{ pubkey }}" method="post" style="display: inline;">
+                                <button type="submit" class="follow-button">Follow</button>
+                            </form>
+                        {% endif %}
+                    {% endif %}
+                </div>
                 <div class="profile-pubkey-small">{{ pubkey }}</div>
                 {% if profile.about %}
                     <div class="profile-bio">{{ profile.about }}</div>

@@ -25,9 +25,22 @@
                         {% endif %}
                     </a>
                     
-                    <div>
-                        <div class="profile-card-name">
-                            <a href="/user/{{ pubkey }}" class="author-link">{{ profile.display_name or profile.name or "Unknown" }}</a>
+                    <div style="flex-grow: 1;">
+                        <div class="profile-card-name-row">
+                            <div class="profile-card-name">
+                                <a href="/user/{{ pubkey }}" class="author-link">{{ profile.display_name or profile.name or "Unknown" }}</a>
+                            </div>
+                            {% if logged_in and user_pubkey != pubkey %}
+                                {% if pubkey in following_list %}
+                                    <form action="/unfollow/{{ pubkey }}" method="post" style="display: inline;">
+                                        <button type="submit" class="unfollow-button-small">Unfollow</button>
+                                    </form>
+                                {% else %}
+                                    <form action="/follow/{{ pubkey }}" method="post" style="display: inline;">
+                                        <button type="submit" class="follow-button-small">Follow</button>
+                                    </form>
+                                {% endif %}
+                            {% endif %}
                         </div>
                         <div class="profile-card-nip05">
                             {{ profile.nip05 if profile.nip05 else "" }}

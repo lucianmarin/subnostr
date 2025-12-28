@@ -217,14 +217,50 @@ async def user_profile(request: Request, pubkey: str, until: Optional[int] = Non
         
     display_name = profile.get("display_name") or profile.get("name") or f"{pubkey[:8]}..."
     
+    is_following = False
+    if ctx["logged_in"]:
+        following_list = await nostr_manager.get_following_list(ctx["user_pubkey"])
+        is_following = pubkey in following_list
+
     return templates.TemplateResponse("index.html", {
         **ctx,
         "events": events,
         "profile": profile,
         "pubkey": pubkey,
         "title": f"Profile: {display_name}",
-        "next_until": next_until
+        "next_until": next_until,
+        "is_following": is_following
     })
+
+@app.post("/follow/{pubkey}")
+async def follow_user(request: Request, pubkey: str):
+    user_nsec = request.cookies.get("user_nsec")
+    if not user_nsec:
+        return RedirectResponse(url="/login", status_code=303)
+    
+    try:
+        keys = Keys.parse(user_nsec)
+        await nostr_manager.follow(keys, pubkey)
+        referer = request.headers.get("referer")
+        return RedirectResponse(url=referer or f"/user/{pubkey}", status_code=303)
+    except Exception as e:
+        print(f"Error following user: {e}")
+        return RedirectResponse(url=f"/user/{pubkey}", status_code=303)
+
+@app.post("/unfollow/{pubkey}")
+async def unfollow_user(request: Request, pubkey: str):
+    user_nsec = request.cookies.get("user_nsec")
+    if not user_nsec:
+        return RedirectResponse(url="/login", status_code=303)
+    
+    try:
+        keys = Keys.parse(user_nsec)
+        await nostr_manager.unfollow(keys, pubkey)
+        referer = request.headers.get("referer")
+        return RedirectResponse(url=referer or f"/user/{pubkey}", status_code=303)
+    except Exception as e:
+        print(f"Error unfollowing user: {e}")
+        return RedirectResponse(url=f"/user/{pubkey}", status_code=303)
 
 @app.get("/following")
 async def following_page(request: Request):
@@ -250,7 +286,8 @@ async def following_page(request: Request):
         return templates.TemplateResponse("following.html", {
             **ctx,
             "profiles": sorted_profiles,
-            "following_count": len(following_pubkeys)
+            "following_count": len(following_pubkeys),
+            "following_list": following_pubkeys
         })
     except Exception as e:
         return templates.TemplateResponse("following.html", {
@@ -269,6 +306,7 @@ async def followers_page(request: Request):
     try:
         pubkey = ctx["user_pubkey"]
         follower_pubkeys = await nostr_manager.get_followers_list(pubkey)
+        following_pubkeys = await nostr_manager.get_following_list(pubkey)
         profiles = await nostr_manager.get_profiles(follower_pubkeys)
 
         sorted_profiles = {}
@@ -284,7 +322,8 @@ async def followers_page(request: Request):
         return templates.TemplateResponse("followers.html", {
             **ctx,
             "profiles": sorted_profiles,
-            "followers_count": len(follower_pubkeys)
+            "followers_count": len(follower_pubkeys),
+            "following_list": following_pubkeys
         })
     except Exception as e:
         return templates.TemplateResponse("followers.html", {

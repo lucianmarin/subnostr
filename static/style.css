@@ -373,6 +373,47 @@ button:hover {
     margin-bottom: 5px;
 }
 
+.profile-name-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.follow-button {
+    background: #000;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 14px;
+    width: auto;
+}
+
+.follow-button:hover {
+    background: #333;
+}
+
+.unfollow-button {
+    background: #fff;
+    color: #000;
+    border: 1px solid #ccc;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 14px;
+    width: auto;
+}
+
+.unfollow-button:hover {
+    background: #f8f9fa;
+    border-color: #ff4b4b;
+    color: #ff4b4b;
+}
+
 .profile-pubkey-small {
     font-family: monospace;
     font-size: 13px;
@@ -563,6 +604,48 @@ button:hover {
     display: flex;
     align-items: center;
     gap: 15px;
+}
+
+.profile-card-name-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 20px;
+}
+
+.follow-button-small {
+    background: #000;
+    color: #fff;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 12px;
+    width: auto;
+}
+
+.follow-button-small:hover {
+    background: #333;
+}
+
+.unfollow-button-small {
+    background: #fff;
+    color: #000;
+    border: 1px solid #ccc;
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 12px;
+    width: auto;
+}
+
+.unfollow-button-small:hover {
+    background: #f8f9fa;
+    border-color: #ff4b4b;
+    color: #ff4b4b;
 }
 
 .profile-card-avatar {
