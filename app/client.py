@@ -118,21 +118,24 @@ class NostrManager:
             if events.len() == 0:
                 return []
 
-            # Find the most recent contact list event
-            latest_event = max(events.to_vec(), key=lambda e: e.created_at().as_secs())
+            # Build a map of followed pubkey -> most recent event timestamp where it appears
+            followed_map = {}  # pubkey -> latest_created_at_secs
+            for event in events.to_vec():
+                ts = event.created_at().as_secs()
+                for tag in event.tags().to_vec():
+                    t = tag.as_vec()
+                    if len(t) >= 2 and t[0] == "p":
+                        pk = t[1]
+                        # Keep the most recent timestamp for this followed pubkey
+                        if pk not in followed_map or ts > followed_map[pk]:
+                            followed_map[pk] = ts
 
-            followed_pubkeys = set()
-
-            # Extract 'p' tags from the latest event
-            tags = latest_event.tags().to_vec()
-            for tag in tags:
-                t = tag.as_vec()
-                # Check for "p" tag
-                if len(t) >= 2 and t[0] == "p":
-                    followed_pubkeys.add(t[1])
+            # Return followed pubkeys sorted by the most recent time they appeared (desc)
+            sorted_followed = sorted(followed_map.items(), key=lambda x: x[1])
+            followed_pubkeys = [pk for pk, _ in sorted_followed]
 
             print(f"Found {len(followed_pubkeys)} unique followed users")
-            return list(followed_pubkeys)
+            return followed_pubkeys
         except Exception as e:
             print(f"Error fetching contact list: {e}")
             return []
@@ -566,17 +569,22 @@ class NostrManager:
             # We still need to verify if that latest list STILL contains the user.
             # (Because relay might have returned an older version if the new one doesn't match the filter)
 
-            followers = set()
+            followers = []
             for author, event in author_events.items():
                 tags = event.tags().to_vec()
                 for tag in tags:
                     t = tag.as_vec()
                     if len(t) >= 2 and t[0] == "p" and t[1] == pubkey_hex:
-                        followers.add(author)
+                        # include tuple of (author, timestamp)
+                        followers.append((author, event.created_at().as_secs()))
                         break
 
-            print(f"Found {len(followers)} verified current followers")
-            return list(followers)
+            # Sort followers by their latest contact-list event time (desc) and return authors only
+            followers.sort(key=lambda x: x[1])
+            sorted_followers = [a for a, _ in followers]
+
+            print(f"Found {len(sorted_followers)} verified current followers")
+            return sorted_followers
         except Exception as e:
             print(f"Error fetching followers list: {e}")
             return []

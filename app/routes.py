@@ -109,18 +109,18 @@ async def replies_feed(request: Request, until: Optional[int] = None):
 @router.get("/user/{pubkey}")
 async def user_profile(request: Request, pubkey: str, until: Optional[int] = None):
     ctx = await get_context(request)
-    
+
     profiles = await nostr_manager.get_profiles([pubkey])
     profile = profiles.get(pubkey, {})
-    
+
     events = await nostr_manager.get_user_posts(pubkey, limit=20, until=until)
-    
+
     next_until = None
     if events:
         next_until = events[-1]["created_at"] - 1
-        
+
     display_name = profile.get("display_name") or profile.get("name") or f"{pubkey[:8]}..."
-    
+
     is_following = False
     if ctx["logged_in"]:
         following_list = await nostr_manager.get_following_list(ctx["user_pubkey"])
@@ -141,7 +141,7 @@ async def follow_user(request: Request, pubkey: str):
     user_nsec = request.cookies.get("user_nsec")
     if not user_nsec:
         return RedirectResponse(url="/login", status_code=303)
-    
+
     try:
         keys = Keys.parse(user_nsec)
         await nostr_manager.follow(keys, pubkey)
@@ -156,7 +156,7 @@ async def unfollow_user(request: Request, pubkey: str):
     user_nsec = request.cookies.get("user_nsec")
     if not user_nsec:
         return RedirectResponse(url="/login", status_code=303)
-    
+
     try:
         keys = Keys.parse(user_nsec)
         await nostr_manager.unfollow(keys, pubkey)
@@ -177,14 +177,9 @@ async def following_page(request: Request):
         following_pubkeys = await nostr_manager.get_following_list(pubkey)
         profiles = await nostr_manager.get_profiles(following_pubkeys)
 
+        # Preserve order from `get_following_list` (newest-first)
         sorted_profiles = {}
-        def get_name(pk):
-            p = profiles.get(pk, {})
-            return p.get("display_name") or p.get("name") or pk
-
-        sorted_pubkeys = sorted(following_pubkeys, key=get_name)
-
-        for pk in sorted_pubkeys:
+        for pk in reversed(following_pubkeys):
             sorted_profiles[pk] = profiles.get(pk, {})
 
         return templates.TemplateResponse("following.html", {
@@ -213,14 +208,9 @@ async def followers_page(request: Request):
         following_pubkeys = await nostr_manager.get_following_list(pubkey)
         profiles = await nostr_manager.get_profiles(follower_pubkeys)
 
+        # Preserve order from `get_followers_list` (newest-first)
         sorted_profiles = {}
-        def get_name(pk):
-            p = profiles.get(pk, {})
-            return p.get("display_name") or p.get("name") or pk
-
-        sorted_pubkeys = sorted(follower_pubkeys, key=get_name)
-
-        for pk in sorted_pubkeys:
+        for pk in reversed(follower_pubkeys):
             sorted_profiles[pk] = profiles.get(pk, {})
 
         return templates.TemplateResponse("followers.html", {
@@ -269,7 +259,7 @@ async def post_submit(request: Request, content: str = Form(...), nsec: Optional
 async def view_post(request: Request, note_id: str):
     ctx = await get_context(request)
     post, replies = await nostr_manager.get_post_with_replies(note_id)
-    
+
     if not post:
         return templates.TemplateResponse("index.html", {
             **ctx,
