@@ -28,6 +28,43 @@ body {
     overflow-y: auto;
 }
 
+.sidebar-profile {
+    margin-bottom: 30px;
+    text-align: right;
+    border-bottom: 1px solid #444;
+    padding-bottom: 20px;
+}
+
+.sidebar-profile-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.sidebar-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin: 0 0 0 auto;
+    border: 2px solid #555;
+}
+
+.sidebar-avatar-placeholder {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #555;
+    color: #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    margin: 0 0 0 auto;
+    border: 2px solid #666;
+}
+
 .sidebar nav {
     display: flex;
     flex-direction: column;
@@ -67,6 +104,10 @@ body {
     margin-top: 0;
 }
 
+h2 {
+    margin-top: 0;
+}
+
 .note {
     background: #fff;
     border: 1px solid #ddd;
@@ -77,7 +118,7 @@ body {
 }
 
 .note-meta {
-    font-size: 0.85em;
+    font-size: 14px;
     color: #777;
     margin-bottom: 10px;
     border-bottom: 1px solid #eee;
@@ -96,6 +137,15 @@ body {
 
 .note-content p:last-child {
     margin-bottom: 0;
+}
+
+.embedded-image {
+    max-width: 100%;
+    max-height: 500px;
+    display: block;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: 1px solid #eee;
 }
 
 .post-form-container, .login-container {
@@ -163,7 +213,7 @@ button:hover {
     .nav-item {
         padding: 8px 12px;
         margin-bottom: 0;
-        font-size: 0.9rem;
+        font-size: 14px;
     }
     .content-area {
         padding: 15px;
@@ -183,7 +233,7 @@ button:hover {
     }
     .nav-item {
         padding: 6px 10px;
-        font-size: 0.85rem;
+        font-size: 14px;
     }
 }
 
@@ -221,20 +271,18 @@ button:hover {
 
 .note-info {
     flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
 }
 
 .note-author-name {
+    display: block;
     font-weight: bold;
     color: #333;
-    font-size: 1rem;
+    font-size: 16px;
     line-height: 1.2;
 }
 
 .note-date {
-    font-size: 0.8em;
+    font-size: 14px;
     color: #888;
     margin-top: 2px;
 }
@@ -246,7 +294,7 @@ button:hover {
     padding: 10px 12px;
     margin-bottom: 12px;
     border-radius: 0 4px 4px 0;
-    font-size: 0.9em;
+    font-size: 14px;
 }
 
 .parent-note-header {
@@ -254,7 +302,7 @@ button:hover {
     align-items: center;
     margin-bottom: 6px;
     color: #6c757d;
-    font-size: 0.9em;
+    font-size: 14px;
 }
 
 .parent-avatar-small {
@@ -319,7 +367,7 @@ button:hover {
 }
 
 .profile-name-large {
-    font-size: 1.8rem;
+    font-size: 29px;
     font-weight: bold;
     color: #333;
     margin-bottom: 5px;
@@ -327,14 +375,14 @@ button:hover {
 
 .profile-pubkey-small {
     font-family: monospace;
-    font-size: 0.8rem;
+    font-size: 13px;
     color: #888;
     margin-bottom: 15px;
     word-break: break-all;
 }
 
 .profile-bio {
-    font-size: 1rem;
+    font-size: 16px;
     color: #444;
     margin-bottom: 15px;
     white-space: pre-wrap;
@@ -400,7 +448,7 @@ button:hover {
     font-family: monospace;
     cursor: pointer;
     padding: 5px 10px;
-    font-size: 0.8rem;
+    font-size: 13px;
     width: auto;
     transition: color 0.2s;
 }
@@ -415,15 +463,149 @@ button:hover {
     padding: 5px 10px;
     background: #f8f9fa;
     border-radius: 4px;
-    font-size: 0.8rem;
+    font-size: 13px;
     color: #666;
     font-style: italic;
     border: 1px dashed #ddd;
     margin-top: 5px;
 }
 
-.note-meta-top {
+/* New Classes for Inline Styles Removal */
+.error-message {
+    color: red;
+    padding: 10px;
+    border: 1px solid red;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+.error-message-small {
+    color: red;
+    border: 1px solid red;
+    padding: 8px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+.parent-link {
     display: flex;
     align-items: center;
-    gap: 8px;
+    text-decoration: none;
+    color: inherit;
+}
+
+.replying-to-label {
+    margin-right: 5px;
+}
+
+.author-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.note-date-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.reply-count {
+    margin-left: 10px;
+    color: #666;
+    font-size: 14px;
+}
+
+.pagination-container {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.load-more-button {
+    display: inline-block;
+    background: #007bff;
+    color: white;
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 4px;
+}
+
+.load-more-button:hover {
+    background: #0056b3;
+}
+
+.main-post-content {
+    font-size: 19px;
+    margin-bottom: 20px;
+}
+
+.reply-form {
+    margin: 20px 0;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.reply-textarea {
+    width: 100%;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+.submit-reply-button {
+    margin-top: 10px;
+    width: auto;
+}
+
+.profile-card-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.profile-card-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.profile-card-avatar-placeholder {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.profile-card-name {
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.profile-card-nip05 {
+    color: #666;
+    font-size: 14px;
+}
+
+.profile-card-about {
+    margin-top: 10px;
+    color: #444;
+}
+
+.profile-card-pubkey {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #999;
+}
+
+.logged-in-status {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 16px;
 }

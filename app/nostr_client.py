@@ -17,6 +17,7 @@ class NostrManager:
             "wss://relay.nostr.band"
         ]
         self.connected = False
+        self._profiles_cache = {}
 
     async def start(self):
         if not self.connected:
@@ -57,6 +58,41 @@ class NostrManager:
             results.append(data)
         return results
 
+    async def _enrich_with_reply_counts(self, results):
+        if not results:
+            return results
+            
+        event_ids = []
+        for r in results:
+            try:
+                event_ids.append(EventId.parse(r["id"]))
+            except:
+                continue
+        
+        if not event_ids:
+            return results
+            
+        # Fetch all Kind 1 events tagging these IDs
+        f = Filter().kind(Kind(1)).events(event_ids)
+        reply_events = await self.client.fetch_events(f, timedelta(seconds=5))
+        
+        # Count replies for each ID
+        counts = {r["id"]: 0 for r in results}
+        for e in reply_events.to_vec():
+            # Check 'e' tags to see which event is being replied to
+            for tag in e.tags().to_vec():
+                t = tag.as_vec()
+                if len(t) >= 2 and t[0] == "e":
+                    target_id = t[1]
+                    if target_id in counts:
+                        counts[target_id] += 1
+                        break # Count only once per event
+                        
+        for r in results:
+            r["reply_count"] = counts.get(r["id"], 0)
+            
+        return results
+
     async def get_global_feed(self, limit: int = 20, until: Optional[int] = None):
         await self.start()
         # Filter for text notes (Kind 1)
@@ -65,7 +101,8 @@ class NostrManager:
             f = f.until(Timestamp.from_secs(until))
             
         events = await self.client.fetch_events(f, timedelta(seconds=5))
-        return await self._enrich_events(events.to_vec())
+        enriched = await self._enrich_events(events.to_vec())
+        return await self._enrich_with_reply_counts(enriched)
     
     async def get_following_list(self, pubkey_hex: str) -> List[str]:
         await self.start()
@@ -126,7 +163,8 @@ class NostrManager:
             f = f.until(Timestamp.from_secs(until))
 
         events = await self.client.fetch_events(f, timedelta(seconds=5))
-        return await self._enrich_events(events.to_vec())
+        enriched = await self._enrich_events(events.to_vec())
+        return await self._enrich_with_reply_counts(enriched)
 
     async def get_events(self, event_ids: List[str]) -> Dict[str, dict]:
         await self.start()
@@ -193,7 +231,8 @@ class NostrManager:
         # Enrich and return only the requested limit
         enriched = await self._enrich_events(reply_events)
         results = enriched[:limit]
-        return await self._enrich_with_parents(results)
+        with_parents = await self._enrich_with_parents(results)
+        return await self._enrich_with_reply_counts(with_parents)
 
     async def _enrich_with_parents(self, results):
         if not results:
@@ -259,7 +298,8 @@ class NostrManager:
                 
             events = await self.client.fetch_events(f, timedelta(seconds=5))
             enriched = await self._enrich_events(events.to_vec())
-            return await self._enrich_with_parents(enriched)
+            with_parents = await self._enrich_with_parents(enriched)
+            return await self._enrich_with_reply_counts(with_parents)
         except Exception as e:
             print(f"Error fetching user posts: {e}")
             return []
@@ -353,6 +393,10 @@ class NostrManager:
             for node in nodes.values():
                 node["replies"].sort(key=lambda x: x["created_at"])
             
+            # Enrich all collected nodes with reply counts
+            all_nodes = list(nodes.values())
+            await self._enrich_with_reply_counts(all_nodes)
+            
             return main_post, main_post["replies"]
             
         except Exception as e:
@@ -363,6 +407,8 @@ class NostrManager:
                 p = profiles[main_post["pubkey"]]
                 main_post["author_name"] = p.get("display_name") or p.get("name")
                 main_post["author_picture"] = p.get("picture")
+            
+            await self._enrich_with_reply_counts([main_post])
             return main_post, []
 
     async def publish_note(self, content: str, keys: Keys, reply_to_id: Optional[str] = None):
@@ -453,37 +499,49 @@ class NostrManager:
         if not pubkeys:
             return {}
 
+        results = {}
+        missing_pks = []
+        
+        for pk in pubkeys:
+            if pk in self._profiles_cache:
+                results[pk] = self._profiles_cache[pk]
+            else:
+                missing_pks.append(pk)
+        
+        if not missing_pks:
+            return results
+
         # Limit to avoid huge filters
-        pubkeys = pubkeys[:250]
+        missing_pks = missing_pks[:250]
         
         pks = []
-        for pk in pubkeys:
+        for pk in missing_pks:
             try:
                 pks.append(PublicKey.parse(pk))
             except:
                 continue
                 
         if not pks:
-            return {}
+            return results
 
         # Kind 0 is Metadata
         f = Filter().kind(Kind(0)).authors(pks)
         
         # We don't need history, just latest, but relays might send multiples.
-        # We can handle deduping in python.
         events = await self.client.fetch_events(f, timedelta(seconds=5))
         
-        profiles = {}
         # Sort by created_at ascending so we overwrite with newer data
         sorted_events = sorted(events.to_vec(), key=lambda x: x.created_at().as_secs())
         
         for event in sorted_events:
             try:
+                author = event.author().to_hex()
                 content = json.loads(event.content())
-                profiles[event.author().to_hex()] = content
+                self._profiles_cache[author] = content
+                results[author] = content
             except:
                 continue
                 
-        return profiles
+        return results
 
 nostr_manager = NostrManager()

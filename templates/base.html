@@ -9,6 +9,18 @@
 <body>
     <div class="app-layout">
         <aside class="sidebar">
+            {% if logged_in and user_pubkey %}
+            <div class="sidebar-profile">
+                <a href="/user/{{ user_pubkey }}" class="sidebar-profile-link">
+                    {% if user_profile and user_profile.picture %}
+                        <img src="{{ user_profile.picture }}" class="sidebar-avatar" alt="Avatar">
+                    {% else %}
+                        <div class="sidebar-avatar-placeholder">{{ user_pubkey[:2] }}</div>
+                    {% endif %}
+                </a>
+            </div>
+            {% endif %}
+
             <nav>
                 {% if logged_in %}
                     <a href="/feed" class="nav-item">My Feed</a>

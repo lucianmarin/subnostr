@@ -13,27 +13,30 @@
                 {% endif %}
             </a>
             <div class="note-info">
-                <div class="note-meta-top">
-                    <a href="/user/{{ note.pubkey }}" style="text-decoration: none;">
-                        <span class="note-author-name" title="{{ note.pubkey }}">
-                            {% if note.author_name %}
-                                {{ note.author_name }}
-                            {% else %}
-                                {{ note.pubkey[:8] }}...
-                            {% endif %}
-                        </span>
-                    </a>
-                    <a href="/post/{{ note.id }}" title="{{ note.timestamp }}" style="text-decoration: none; color: inherit;">
-                        <span class="note-date">{{ note.created_at | time_ago }}</span>
-                    </a>
-                </div>
+                <a href="/user/{{ note.pubkey }}" class="author-link">
+                    <span class="note-author-name" title="{{ note.pubkey }}">
+                        {% if note.author_name %}
+                            {{ note.author_name }}
+                        {% else %}
+                            {{ note.pubkey[:8] }}...
+                        {% endif %}
+                    </span>
+                </a>
+                <a href="/post/{{ note.id }}" class="note-date-link" title="{{ note.timestamp }}">
+                    <span class="note-date">{{ note.created_at | time_ago }}</span>
+                </a>
+                {% if note.reply_count > 0 %}
+                    <span class="reply-count">
+                        💬 {{ note.reply_count }}
+                    </span>
+                {% endif %}
             </div>
             <button class="collapse-toggle" onclick="toggleNote('{{ note.id }}')" title="Collapse/Expand">[-]</button>
         </div>
         
         <div class="note-body" id="body-{{ note.id }}">
             <div class="note-content">
-                {{ note.content | format_content | linkify_images | safe }}
+                {{ note.content | format_content | linkify_images | linkify_urls | safe }}
             </div>
 
             {% if note.replies %}
@@ -55,8 +58,8 @@
         {% if post.parent_post %}
         <div class="parent-note">
             <div class="parent-note-header">
-                <span style="margin-right: 5px;">Replying to</span>
-                <a href="/user/{{ post.parent_post.pubkey }}" style="display: flex; align-items: center; text-decoration: none; color: inherit;">
+                <span class="replying-to-label">Replying to</span>
+                <a href="/user/{{ post.parent_post.pubkey }}" class="parent-link">
                     {% if post.parent_post.author_picture %}
                         <img src="{{ post.parent_post.author_picture }}" class="parent-avatar-small" alt="Avatar">
                     {% endif %}
@@ -69,8 +72,8 @@
                     </span>
                 </a>
             </div>
-            <a href="/post/{{ post.parent_post.id }}" style="text-decoration: none; color: inherit;">
-                <div class="parent-note-content">{{ post.parent_post.content | format_content | linkify_images | safe }}</div>
+            <a href="/post/{{ post.parent_post.id }}" class="author-link">
+                <div class="parent-note-content">{{ post.parent_post.content | format_content | linkify_images | linkify_urls | safe }}</div>
             </a>
         </div>
         {% endif %}
@@ -87,35 +90,40 @@
                     {% endif %}
                 </a>
                 <div class="note-info">
-                    <a href="/user/{{ post.pubkey }}" style="text-decoration: none;">
+                    <a href="/user/{{ post.pubkey }}" class="author-link">
                         <span class="note-author-name" title="{{ post.pubkey }}">
                             {% if post.author_name %}
                                 {{ post.author_name }}
                             {% else %}
-                                {{ note.pubkey[:8] if note else post.pubkey[:8] }}...
+                                {{ post.pubkey[:8] }}...
                             {% endif %}
                         </span>
                     </a>
-                    <a href="/post/{{ post.id }}" title="{{ post.timestamp }}" style="text-decoration: none; color: inherit;">
+                    <a href="/post/{{ post.id }}" class="note-date-link" title="{{ post.timestamp }}">
                         <span class="note-date">{{ post.created_at | time_ago }}</span>
                     </a>
+                    {% if post.reply_count > 0 %}
+                        <span class="reply-count">
+                            💬 {{ post.reply_count }}
+                        </span>
+                    {% endif %}
                 </div>
             </div>
-            <div class="note-content" style="font-size: 1.2rem; margin-bottom: 20px;">
-                {{ post.content | format_content | linkify_images | safe }}
+            <div class="note-content main-post-content">
+                {{ post.content | format_content | linkify_images | linkify_urls | safe }}
             </div>
         </div>
 
-        <div class="reply-form" style="margin: 20px 0; padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #ddd;">
+        <div class="reply-form">
             <h3>Reply to this note</h3>
             {% if not logged_in %}
                 <p>Please <a href="/login">Login</a> to reply.</p>
             {% else %}
                 <form action="/post/{{ post.id }}/reply" method="post">
                     <div class="form-group">
-                        <textarea id="content" name="content" rows="3" required placeholder="Write your reply..." style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ccc;"></textarea>
+                        <textarea id="content" name="content" rows="3" required placeholder="Write your reply..." class="reply-textarea"></textarea>
                     </div>
-                    <button type="submit" style="margin-top: 10px;">Send Reply</button>
+                    <button type="submit" class="submit-reply-button">Send Reply</button>
                 </form>
             {% endif %}
         </div>

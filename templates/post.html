@@ -4,7 +4,7 @@
     <h2>Post a Note</h2>
     <div class="post-form-container">
         {% if error %}
-            <p style="color: red; border: 1px solid red; padding: 0.5rem; border-radius: 4px;">{{ error }}</p>
+            <p class="error-message-small">{{ error }}</p>
         {% endif %}
 
         <form action="/post" method="post">
@@ -15,7 +15,7 @@
                 <small>Required to sign the event. You can also <a href="/login">login</a> to save it for this session.</small>
             </div>
             {% else %}
-            <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">
+            <p class="logged-in-status">
                 Posting as logged-in user. <a href="/logout">Logout</a> to use a different key.
             </p>
             {% endif %}

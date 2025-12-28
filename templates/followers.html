@@ -4,7 +4,7 @@
     <div class="feed">
         <h2>Followers ({{ followers_count }})</h2>
         {% if error %}
-            <p style="color: red;">{{ error }}</p>
+            <p class="error-message">{{ error }}</p>
         {% endif %}
 
         {% if not profiles %}
@@ -14,32 +14,34 @@
         <div class="profiles-list">
         {% for pubkey, profile in profiles.items() %}
             <div class="note">
-                <div class="profile-header" style="display: flex; align-items: center; gap: 15px;">
-                    {% if profile.picture %}
-                        <img src="{{ profile.picture }}" alt="Profile" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
-                    {% else %}
-                        <div style="width: 50px; height: 50px; border-radius: 50%; background: #ddd; display: flex; align-items: center; justify-content: center; font-weight: bold;">
-                            {{ profile.name[:2] if profile.name else "??" }}
-                        </div>
-                    {% endif %}
+                <div class="profile-card-header">
+                    <a href="/user/{{ pubkey }}" class="author-link">
+                        {% if profile.picture %}
+                            <img src="{{ profile.picture }}" alt="Profile" class="profile-card-avatar">
+                        {% else %}
+                            <div class="profile-card-avatar-placeholder">
+                                {{ profile.name[:2] if profile.name else "??" }}
+                            </div>
+                        {% endif %}
+                    </a>
                     
                     <div>
-                        <div style="font-weight: bold; font-size: 1.1em;">
-                            {{ profile.display_name or profile.name or "Unknown" }}
+                        <div class="profile-card-name">
+                            <a href="/user/{{ pubkey }}" class="author-link">{{ profile.display_name or profile.name or "Unknown" }}</a>
                         </div>
-                        <div style="color: #666; font-size: 0.9em;">
+                        <div class="profile-card-nip05">
                             {{ profile.nip05 if profile.nip05 else "" }}
                         </div>
                     </div>
                 </div>
                 
                 {% if profile.about %}
-                <div class="note-content" style="margin-top: 10px; color: #444;">
+                <div class="profile-card-about">
                     {{ profile.about }}
                 </div>
                 {% endif %}
                 
-                <div style="margin-top: 10px; font-size: 0.8em; color: #999;">
+                <div class="profile-card-pubkey">
                     {{ pubkey }}
                 </div>
             </div>

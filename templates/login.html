@@ -1,20 +1,24 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h2>Login</h2>
     <div class="login-container">
+        <h2>Login</h2>
+        <p>Enter your private key (nsec) to sign into your account. Your key is stored in a secure HTTP-only cookie and never sent to any server other than for local processing.</p>
+        
+        {% if error %}
+            <p class="error-message-small">{{ error }}</p>
+        {% endif %}
+
         <form action="/login" method="post">
             <div class="form-group">
                 <label for="nsec">Private Key (nsec):</label>
                 <input type="password" id="nsec" name="nsec" required placeholder="nsec1...">
             </div>
-            {% if error %}
-                <p style="color: red;">{{ error }}</p>
-            {% endif %}
             <button type="submit">Login</button>
         </form>
-        <p style="margin-top: 1rem; font-size: 0.9rem; color: #666;">
-            Note: Your key is stored in a session cookie.
-        </p>
+        
+        <div style="margin-top: 20px; font-size: 14px; color: #666;">
+            <p>Don't have a key? You can generate one using a Nostr signer extension or other tools.</p>
+        </div>
     </div>
 {% endblock %}
