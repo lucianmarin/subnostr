@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="feed">
+        <h2>{{ title }}</h2>
+
+        {% if error %}
+            <p class="error-message">{{ error }}</p>
+        {% endif %}
+
+        {% if not events %}
+            <p>No new notifications.</p>
+        {% endif %}
+
+        {% for note in events %}
+        <div class="note notification-item">
+            <div class="note-header">
+                <a href="/user/{{ note.pubkey }}">
+                    {% if note.author_picture %}
+                        <img src="{{ note.author_picture }}" class="note-avatar" alt="Avatar" loading="lazy">
+                    {% else %}
+                        <div class="note-avatar-placeholder">
+                            {{ note.pubkey[:2] }}
+                        </div>
+                    {% endif %}
+                </a>
+                <div class="note-info">
+                    <span class="notification-type">
+                        {% if note.kind == 7 %}
+                            ❤️ Liked
+                        {% elif note.kind == 6 %}
+                            🔁 Reposted
+                        {% elif note.kind == 1 %}
+                            ↩️ Replied
+                        {% elif note.kind == 9735 %}
+                            ⚡ Zapped
+                        {% else %}
+                            Notification (Kind {{ note.kind }})
+                        {% endif %}
+                    </span>
+                    <a href="/user/{{ note.pubkey }}" class="author-link">
+                        <span class="note-author-name">
+                            {% if note.author_name %}
+                                {{ note.author_name }}
+                            {% else %}
+                                {{ note.pubkey[:8] }}...
+                            {% endif %}
+                        </span>
+                    </a>
+                    <span class="note-date">{{ note.created_at | time_ago }}</span>
+                </div>
+            </div>
+            
+            <div class="note-content">
+                {% if note.kind == 7 %}
+                     <!-- Liked content is usually just "+" or empty -->
+                {% else %}
+                    {{ note.content | format_content | linkify_images | linkify_urls | safe }}
+                {% endif %}
+            </div>
+
+            <!-- Inline Target Post -->
+            {% if note.parent_post %}
+            <div class="parent-note" style="margin-top: 10px; opacity: 0.9;">
+                <div class="parent-note-header">
+                    <a href="/user/{{ note.parent_post.pubkey }}" class="parent-link">
+                        {% if note.parent_post.author_picture %}
+                            <img src="{{ note.parent_post.author_picture }}" class="parent-avatar-small" alt="Avatar">
+                        {% else %}
+                             <div class="parent-avatar-small" style="background-color: #eee; width: 20px; height: 20px; border-radius: 50%;"></div>
+                        {% endif %}
+                        <span class="parent-author-name">
+                            {% if note.parent_post.author_name %}
+                                {{ note.parent_post.author_name }}
+                            {% else %}
+                                {{ note.parent_post.pubkey[:8] }}...
+                            {% endif %}
+                        </span>
+                    </a>
+                    <span style="font-size: 0.8em; color: #666; margin-left: 5px;">{{ note.parent_post.created_at | time_ago }}</span>
+                </div>
+                <a href="/post/{{ note.parent_post.id }}" class="author-link" style="text-decoration: none; color: inherit;">
+                    <div class="parent-note-content">{{ note.parent_post.content | format_content | linkify_images | linkify_urls | safe }}</div>
+                </a>
+            </div>
+            {% endif %}
+
+        </div>
+        {% endfor %}
+
+        {% if next_until %}
+        <div class="pagination-container">
+            <a href="?until={{ next_until }}" class="load-more-button">Load More</a>
+        </div>
+        {% endif %}
+    </div>
+{% endblock %}

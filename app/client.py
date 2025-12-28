@@ -30,6 +30,7 @@ class NostrManager:
 
         return {
             "id": event.id().to_hex(),
+            "kind": event.kind().as_u16(),
             "content": event.content(),
             "pubkey": event.author().to_hex(),
             "created_at": event.created_at().as_secs(),
@@ -605,6 +606,26 @@ class NostrManager:
             return sorted_followers
         except Exception as e:
             print(f"Error fetching followers list: {e}")
+            return []
+
+    async def get_notifications(self, pubkey_hex: str, limit: int = 20, until: Optional[int] = None):
+        await self.start()
+        try:
+            pk = PublicKey.parse(pubkey_hex)
+            # Filter for Kind 1 (Text) and Kind 7 (Reaction) where the 'p' tag is the user
+            f = Filter().kinds([Kind(1), Kind(7)]).pubkey(pk).limit(limit)
+
+            if until:
+                f = f.until(Timestamp.from_secs(until))
+
+            events = await self.client.fetch_events(f, timedelta(seconds=5))
+
+            # Enrich with author profiles
+            enriched = await self._enrich_events(events.to_vec())
+            with_parents = await self._enrich_with_parents(enriched)
+            return with_parents
+        except Exception as e:
+            print(f"Error fetching notifications: {e}")
             return []
 
     async def get_profiles(self, pubkeys: List[str]) -> Dict[str, dict]:
