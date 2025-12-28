@@ -20,13 +20,13 @@ This plan outlines the steps to build a Nostr web client using Python (FastAPI),
 ## Phase 3: User Interface (HTML/CSS)
 - [ ] **Base Template**: Create `templates/base.html` with the standard HTML structure and CSS linking.
 - [ ] **Styles**: Create `static/style.css` with a clean, responsive design.
-- [ ] **Login Page**: Create `templates/login.html` to accept a Public Key (npub) or Private Key (nsec) for the session.
+- [x] **Login Page**: Create `templates/login.html` to accept a Public Key (npub) or Private Key (nsec) for the session.
 - [ ] **Feed Page**: Create `templates/index.html` to display a list of events (notes) from the relays.
 - [ ] **Post Page**: Create `templates/post.html` (or a modal/section) for composing new notes.
 
 ## Phase 4: Integration
 - [ ] **Connect Feed**: Update the index route to fetch real Nostr events and render them in the template.
-- [ ] **Connect Login**: Implement session handling (simple cookie or memory) to store the user's keys/identity.
+- [x] **Connect Login**: Implement session handling (simple cookie or memory) to store the user's keys/identity.
 - [ ] **Connect Posting**: Implement the form submission handler to publish a signed event to relays.
 
 ## Phase 5: Refinement

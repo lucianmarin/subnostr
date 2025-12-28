@@ -7,25 +7,25 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <header>
-        <div class="container">
-            <h1><a href="/">Nostr Client</a></h1>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1><a href="/">SubNostr</a></h1>
+            </div>
             <nav>
-                <a href="/">Global Feed</a>
-                <a href="/post">Post</a>
-                <a href="/login">Login</a>
+                <a href="/" class="nav-item">Global Feed</a>
+                <a href="/post" class="nav-item">Post</a>
+                {% if logged_in %}
+                    <a href="/logout" class="nav-item">Logout</a>
+                {% else %}
+                    <a href="/login" class="nav-item">Login</a>
+                {% endif %}
             </nav>
-        </div>
-    </header>
+        </aside>
 
-    <main class="container">
-        {% block content %}{% endblock %}
-    </main>
-
-    <footer>
-        <div class="container">
-            <p>Powered by Nostr & FastAPI</p>
-        </div>
-    </footer>
+        <main class="content-area">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
 </body>
 </html>

@@ -1,9 +1,20 @@
 {% extends "base.html" %}
 
 {% block content %}
+    <h2>Login</h2>
     <div class="login-container">
-        <h2>Login</h2>
-        <p>For now, please provide your nsec key when posting.</p>
-        <!-- Future: Implement saving key to session/cookie -->
+        <form action="/login" method="post">
+            <div class="form-group">
+                <label for="nsec">Private Key (nsec):</label>
+                <input type="password" id="nsec" name="nsec" required placeholder="nsec1...">
+            </div>
+            {% if error %}
+                <p style="color: red;">{{ error }}</p>
+            {% endif %}
+            <button type="submit">Login</button>
+        </form>
+        <p style="margin-top: 1rem; font-size: 0.9rem; color: #666;">
+            Note: Your key is stored in a session cookie.
+        </p>
     </div>
 {% endblock %}
