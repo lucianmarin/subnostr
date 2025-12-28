@@ -173,7 +173,7 @@ async def replies_feed(request: Request, until: Optional[int] = None):
             "error": str(e)
         })
 
-@app.get("/profile/{pubkey}")
+@app.get("/user/{pubkey}")
 async def user_profile(request: Request, pubkey: str, until: Optional[int] = None):
     user_nsec = request.cookies.get("user_nsec")
     

@@ -2,7 +2,9 @@
 
 {% block content %}
     <div class="feed">
-        <h2>{{ title }}</h2>
+        {% if not profile %}
+            <h2>{{ title }}</h2>
+        {% endif %}
 
         {% if profile %}
         <div class="profile-header">
@@ -38,7 +40,7 @@
             <div class="parent-note">
                 <div class="parent-note-header">
                     <span style="margin-right: 5px;">Replying to</span>
-                    <a href="/profile/{{ note.parent_post.pubkey }}" style="display: flex; align-items: center; text-decoration: none; color: inherit;">
+                    <a href="/user/{{ note.parent_post.pubkey }}" style="display: flex; align-items: center; text-decoration: none; color: inherit;">
                         {% if note.parent_post.author_picture %}
                             <img src="{{ note.parent_post.author_picture }}" class="parent-avatar-small" alt="Avatar">
                         {% endif %}
@@ -55,7 +57,7 @@
             </div>
             {% endif %}
             <div class="note-header">
-                <a href="/profile/{{ note.pubkey }}">
+                <a href="/user/{{ note.pubkey }}">
                     {% if note.author_picture %}
                         <img src="{{ note.author_picture }}" class="note-avatar" alt="Avatar" loading="lazy">
                     {% else %}
@@ -65,7 +67,7 @@
                     {% endif %}
                 </a>
                 <div class="note-info">
-                    <a href="/profile/{{ note.pubkey }}" style="text-decoration: none;">
+                    <a href="/user/{{ note.pubkey }}" style="text-decoration: none;">
                         <span class="note-author-name" title="{{ note.pubkey }}">
                             {% if note.author_name %}
                                 {{ note.author_name }}
