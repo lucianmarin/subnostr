@@ -1,0 +1,68 @@
+from datetime import datetime, timezone
+import re
+
+def time_ago(timestamp: int) -> str:
+    now = datetime.now(timezone.utc).timestamp()
+    diff = now - timestamp
+
+    if diff < 60:
+        return f"{int(diff)}s ago" if diff > 1 else "just now"
+    
+    minutes = diff / 60
+    if minutes < 60:
+        return f"{int(minutes)}m ago"
+    
+    hours = minutes / 60
+    if hours < 24:
+        return f"{int(hours)}h ago"
+    
+    days = hours / 24
+    if days < 7:
+        return f"{int(days)}d ago"
+    
+    weeks = days / 7
+    if weeks < 4:
+        return f"{int(weeks)}w ago"
+    
+    months = days / 30.44  # Average month length
+    if months < 12:
+        return f"{int(months)}mo ago"
+    
+    years = days / 365.25
+    return f"{int(years)}y ago"
+
+def format_content(text: str) -> str:
+    if not text:
+        return ""
+    lines = text.split('\n')
+    paragraphs = []
+    for line in lines:
+        if line.strip():
+            paragraphs.append(f'<p>{line.strip()}</p>')
+    return "".join(paragraphs)
+
+def linkify_images(text: str) -> str:
+    if not text:
+        return ""
+    # More robust regex to find image URLs
+    url_pattern = r'(https?://[^\s<>"]+?\.(?:jpg|jpeg|png|gif))'
+    
+    def replace_with_img(match):
+        url = match.group(1)
+        return f'<img src="{url}" class="embedded-image" loading="lazy">'
+
+    return re.sub(url_pattern, replace_with_img, text, flags=re.IGNORECASE)
+
+def linkify_urls(text: str) -> str:
+    if not text:
+        return ""
+    # Match URLs but skip those already in src="..." or href="..."
+    url_pattern = r'(?<!src=")(?<!href=")(https?://[^\s<>"]+)'
+    
+    def replace(match):
+        url = match.group(1)
+        clean_url = url.rstrip('.,;!?')
+        trailing = url[len(clean_url):]
+        return f'<a href="{clean_url}" target="_blank" rel="noopener noreferrer" class="note-link">{clean_url}</a>{trailing}'
+
+    return re.sub(url_pattern, replace, text, flags=re.IGNORECASE)

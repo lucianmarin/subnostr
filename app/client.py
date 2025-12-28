@@ -1,5 +1,4 @@
 from nostr_sdk import Client, Filter, Kind, Timestamp, Keys, NostrSigner, EventBuilder, RelayUrl, PublicKey, Tag, EventId
-import asyncio
 import json
 from typing import List, Optional, Dict
 from datetime import timedelta
@@ -304,8 +303,6 @@ class NostrManager:
             print(f"Error fetching user posts: {e}")
             return []
 
-
-
     async def get_post_with_replies(self, event_id_hex: str):
         await self.start()
         # Fetch the main post
@@ -337,9 +334,6 @@ class NostrManager:
             f = Filter().kind(Kind(1)).events([eid, rid]).limit(500)
             thread_events_vec = await self.client.fetch_events(f, timedelta(seconds=5))
             thread_events = thread_events_vec.to_vec()
-            
-            # Add main post to the set for tree building if not already there
-            # (though we already have it in main_post)
             
             # Enrich all authors
             for e in thread_events:
