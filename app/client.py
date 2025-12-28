@@ -10,10 +10,8 @@ class NostrManager:
         self.relays = [
             "wss://relay.damus.io",
             "wss://nos.lol",
-            "wss://relay.primal.net",
-            "wss://relay.snort.social",
-            "wss://relay.current.fyi",
-            "wss://relay.nostr.band"
+            "wss://nostr.wine",
+            "wss://relay.snort.social"
         ]
         self.connected = False
         self._profiles_cache = {}
@@ -426,7 +424,10 @@ class NostrManager:
         pub_client = Client(signer)
         for relay in self.relays:
             await pub_client.add_relay(RelayUrl.parse(relay))
-        await pub_client.connect()
+        try:
+            await pub_client.connect()
+        except Exception as e:
+            raise Exception(f"Failed to connect to relays: {e}")
 
         tags = []
         if reply_to_id:
@@ -462,10 +463,14 @@ class NostrManager:
             except Exception as e:
                 print(f"Error preparing reply tags: {e}")
 
-            event = EventBuilder.text_note(content).tags(tags).sign_with_keys(keys)
+        event = EventBuilder.text_note(content).tags(tags).sign_with_keys(keys)
+        try:
             event_id = await pub_client.send_event(event)
-            print(f"Published note: {event_id.to_hex()}")
+            print("Published note")
+        except Exception as e:
             await pub_client.disconnect()
+            raise Exception(f"Failed to send event: {e}")
+        await pub_client.disconnect()
 
     async def follow(self, keys: Keys, follow_pubkey_hex: str):
         await self.start()
@@ -507,8 +512,8 @@ class NostrManager:
             await pub_client.connect()
 
             event = EventBuilder(Kind(3), content).tags(tags).sign_with_keys(keys)
-            event_id = await pub_client.send_event(event)
-            print(f"Published follow event: {event_id.to_hex()}")
+            await pub_client.send_event(event)
+            print("Published follow event")
             await pub_client.disconnect()
         else:
             print(f"Already following {follow_pubkey_hex} and self is included")
@@ -550,8 +555,8 @@ class NostrManager:
             await pub_client.connect()
 
             event = EventBuilder(Kind(3), content).tags(new_tags).sign_with_keys(keys)
-            event_id = await pub_client.send_event(event)
-            print(f"Published unfollow event: {event_id.to_hex()}")
+            await pub_client.send_event(event)
+            print("Published unfollow event")
             await pub_client.disconnect()
         else:
             print(f"Not following {unfollow_pubkey_hex}")

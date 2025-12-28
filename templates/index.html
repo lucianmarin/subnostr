@@ -42,7 +42,7 @@
         {% if error %}
             <p class="error-message">{{ error }}</p>
         {% endif %}
-        
+
         {% if not events %}
             <p>No posts found. {% if title == "Your Feed" %}Try following some people!{% endif %}</p>
         {% endif %}
@@ -93,12 +93,10 @@
                     </a>
                     <a href="/post/{{ note.id }}" class="note-date-link" title="{{ note.timestamp }}">
                         <span class="note-date">{{ note.created_at | time_ago }}</span>
+                        {% if note.reply_count > 0 %}
+                            <span class="reply-count" aria-label="View replies">💬 {{ note.reply_count }}</span>
+                        {% endif %}
                     </a>
-                    {% if note.reply_count > 0 %}
-                        <span class="reply-count">
-                            💬 {{ note.reply_count }}
-                        </span>
-                    {% endif %}
                 </div>
             </div>
             <div class="note-content">

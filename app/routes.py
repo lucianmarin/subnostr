@@ -246,6 +246,14 @@ async def post_submit(request: Request, content: str = Form(...), nsec: Optional
 
     try:
         keys = Keys.parse(user_nsec)
+    except Exception as e:
+        ctx = await get_context(request)
+        return templates.TemplateResponse("post.html", {
+            **ctx,
+            "error": f"Invalid private key: {str(e)}",
+        })
+
+    try:
         await nostr_manager.publish_note(content, keys)
         return RedirectResponse(url="/", status_code=303)
     except Exception as e:

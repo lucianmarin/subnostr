@@ -551,9 +551,13 @@ button:hover {
 
 .reply-count {
     margin-left: 10px;
-    color: #666;
+    color: #888; /* match .note-date color */
     font-size: 14px;
+    text-decoration: none; /* no underline for links */
+    vertical-align: middle;
 }
+
+/* hover styling intentionally removed to keep link color controlled by parent */
 
 .pagination-container {
     text-align: center;

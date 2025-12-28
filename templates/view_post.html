@@ -24,16 +24,14 @@
                 </a>
                 <a href="/post/{{ note.id }}" class="note-date-link" title="{{ note.timestamp }}">
                     <span class="note-date">{{ note.created_at | time_ago }}</span>
+                    {% if note.reply_count > 0 %}
+                        <span class="reply-count" aria-label="View replies">💬 {{ note.reply_count }}</span>
+                    {% endif %}
                 </a>
-                {% if note.reply_count > 0 %}
-                    <span class="reply-count">
-                        💬 {{ note.reply_count }}
-                    </span>
-                {% endif %}
             </div>
             <button class="collapse-toggle" onclick="toggleNote('{{ note.id }}')" title="Collapse/Expand">[-]</button>
         </div>
-        
+
         <div class="note-body" id="body-{{ note.id }}">
             <div class="note-content">
                 {{ note.content | format_content | linkify_images | linkify_urls | safe }}
@@ -101,12 +99,10 @@
                     </a>
                     <a href="/post/{{ post.id }}" class="note-date-link" title="{{ post.timestamp }}">
                         <span class="note-date">{{ post.created_at | time_ago }}</span>
+                        {% if post.reply_count > 0 %}
+                            <span class="reply-count" aria-label="View replies">💬 {{ post.reply_count }}</span>
+                        {% endif %}
                     </a>
-                    {% if post.reply_count > 0 %}
-                        <span class="reply-count">
-                            💬 {{ post.reply_count }}
-                        </span>
-                    {% endif %}
                 </div>
             </div>
             <div class="note-content main-post-content">
@@ -133,7 +129,7 @@
             {% if not replies %}
                 <p>No replies yet.</p>
             {% endif %}
-            
+
             {% for note in replies %}
                 {{ render_note(note) }}
             {% endfor %}
@@ -145,7 +141,7 @@
             const body = document.getElementById('body-' + noteId);
             const indicator = document.getElementById('ind-' + noteId);
             const toggle = document.querySelector('#note-' + noteId + ' .collapse-toggle');
-            
+
             if (body.style.display === 'none') {
                 body.style.display = 'block';
                 indicator.style.display = 'none';
