@@ -87,8 +87,15 @@ body {
 }
 
 .note-content {
-    white-space: pre-wrap;
     word-wrap: break-word;
+}
+
+.note-content p {
+    margin: 0 0 10px 0;
+}
+
+.note-content p:last-child {
+    margin-bottom: 0;
 }
 
 .post-form-container, .login-container {
@@ -350,4 +357,73 @@ button:hover {
         text-align: center;
         padding: 20px;
     }
+}
+
+/* Nested Replies */
+.nested-replies {
+    margin-top: 10px;
+    margin-left: 20px;
+    padding-left: 10px;
+}
+
+.nested-replies.limit-depth {
+    margin-left: 0;
+    border-left: none;
+    padding-left: 0;
+}
+
+.reply-note {
+    background: #fff;
+    border: 1px solid #eee;
+    margin-bottom: 8px;
+    padding: 10px;
+    box-shadow: none;
+}
+
+.reply-note .note-avatar {
+    width: 32px;
+    height: 32px;
+}
+
+.reply-note .note-avatar-placeholder {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+}
+
+/* Collapsible Replies */
+.collapse-toggle {
+    float: right;
+    background: none;
+    border: none;
+    color: #ccc;
+    font-family: monospace;
+    cursor: pointer;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    width: auto;
+    transition: color 0.2s;
+}
+
+.collapse-toggle:hover {
+    color: #999;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.collapsed-indicator {
+    padding: 5px 10px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: #666;
+    font-style: italic;
+    border: 1px dashed #ddd;
+    margin-top: 5px;
+}
+
+.note-meta-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }

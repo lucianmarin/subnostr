@@ -266,24 +266,149 @@ class NostrManager:
 
 
 
-    async def publish_note(self, content: str, keys: Keys):
-        # Create a new client with the signer for this operation
-        # or we can try to use a ClientBuilder if available, but creating a Client is cheap enough if we reuse connection?
-        # Actually, creating a new Client means new connection. 
-        # Better: create a signer and a temporary client, or just use the existing client if we can attach signer.
-        # But Client.signer is likely immutable or hard to change.
-        # Let's try creating a separate client for publishing to ensure we have the correct signer.
+    async def get_post_with_replies(self, event_id_hex: str):
+        await self.start()
+        # Fetch the main post
+        main_events_dict = await self.get_events([event_id_hex])
+        if not main_events_dict:
+            return None, []
         
+        main_post = main_events_dict[event_id_hex]
+        
+        # Enrich main post author
+        profiles_to_fetch = [main_post["pubkey"]]
+        
+        # Find root ID to fetch the whole thread if possible
+        root_id = event_id_hex
+        e_tags = [t for t in main_post.get('tags', []) if t[0] == 'e']
+        for t in e_tags:
+            if len(t) >= 4 and t[3] == 'root':
+                root_id = t[1]
+                break
+        if root_id == event_id_hex and e_tags:
+            root_id = e_tags[0][1]
+
+        # Fetch replies and potentially other thread participants
+        try:
+            eid = EventId.parse(event_id_hex)
+            rid = EventId.parse(root_id)
+            
+            # Fetch events tagging either this post or the root
+            f = Filter().kind(Kind(1)).events([eid, rid]).limit(500)
+            thread_events_vec = await self.client.fetch_events(f, timedelta(seconds=5))
+            thread_events = thread_events_vec.to_vec()
+            
+            # Add main post to the set for tree building if not already there
+            # (though we already have it in main_post)
+            
+            # Enrich all authors
+            for e in thread_events:
+                profiles_to_fetch.append(e.author().to_hex())
+            
+            profiles = await self.get_profiles(list(set(profiles_to_fetch)))
+            
+            def enrich(data):
+                pk = data["pubkey"]
+                if pk in profiles:
+                    prof = profiles[pk]
+                    data["author_name"] = prof.get("display_name") or prof.get("name")
+                    data["author_picture"] = prof.get("picture")
+                data["replies"] = []
+                return data
+
+            enrich(main_post)
+            await self._enrich_with_parents([main_post])
+
+            # Convert all thread events to dicts and enrich
+            nodes = {main_post["id"]: main_post}
+            for e in thread_events:
+                d = self._event_to_dict(e)
+                if d["id"] not in nodes:
+                    nodes[d["id"]] = enrich(d)
+
+            # Build tree
+            for node_id, node in nodes.items():
+                if node_id == event_id_hex:
+                    continue
+                
+                # Find parent
+                parent_id = None
+                node_e_tags = [t for t in node.get('tags', []) if t[0] == 'e']
+                
+                # NIP-10: prefer 'reply' marker
+                for t in node_e_tags:
+                    if len(t) >= 4 and t[3] == 'reply':
+                        parent_id = t[1]
+                        break
+                
+                if not parent_id and node_e_tags:
+                    # Fallback: if only one e tag, it's the root/parent. 
+                    # If multiple, the last one is the reply.
+                    parent_id = node_e_tags[-1][1]
+                
+                if parent_id in nodes:
+                    nodes[parent_id]["replies"].append(node)
+            
+            # Sort replies by time
+            for node in nodes.values():
+                node["replies"].sort(key=lambda x: x["created_at"])
+            
+            return main_post, main_post["replies"]
+            
+        except Exception as e:
+            print(f"Error building thread tree: {e}")
+            # Fallback to basic enrichment if tree building fails
+            profiles = await self.get_profiles([main_post["pubkey"]])
+            if main_post["pubkey"] in profiles:
+                p = profiles[main_post["pubkey"]]
+                main_post["author_name"] = p.get("display_name") or p.get("name")
+                main_post["author_picture"] = p.get("picture")
+            return main_post, []
+
+    async def publish_note(self, content: str, keys: Keys, reply_to_id: Optional[str] = None):
         signer = NostrSigner.keys(keys)
         pub_client = Client(signer)
         for relay in self.relays:
             await pub_client.add_relay(RelayUrl.parse(relay))
         await pub_client.connect()
         
-        builder = EventBuilder.text_note(content)
+        tags = []
+        if reply_to_id:
+            try:
+                parent_id = EventId.parse(reply_to_id)
+                # Fetch parent to find root and author
+                f = Filter().id(parent_id)
+                events = await self.client.fetch_events(f, timedelta(seconds=5))
+                if events.len() > 0:
+                    parent_event = events.to_vec()[0]
+                    parent_tags = parent_event.tags().to_vec()
+                    
+                    root_id = None
+                    for tag in parent_tags:
+                        t = tag.as_vec()
+                        if len(t) >= 2 and t[0] == "e":
+                            # If there's already an 'e' tag, it might be the root
+                            # NIP-10: first 'e' tag is root, last is reply
+                            if not root_id:
+                                root_id = t[1]
+                    
+                    if root_id:
+                        # Add root tag
+                        tags.append(Tag.parse(["e", root_id, "", "root"]))
+                        # Add reply tag
+                        tags.append(Tag.parse(["e", reply_to_id, "", "reply"]))
+                    else:
+                        # Parent is the root
+                        tags.append(Tag.parse(["e", reply_to_id, "", "root"]))
+                    
+                    # Add 'p' tag for the author we are replying to
+                    tags.append(Tag.parse(["p", parent_event.author().to_hex()]))
+            except Exception as e:
+                print(f"Error preparing reply tags: {e}")
+
+        builder = EventBuilder.text_note(content, tags)
         await pub_client.send_event_builder(builder)
-        # We might want to keep this client alive if we expect more posts, but for now close it or let it be collected.
-        # Ideally we should maintain a persistent authenticated client if the user "logs in".
+        await pub_client.disconnect()
 
     async def get_followers_list(self, pubkey_hex: str) -> List[str]:
         await self.start()

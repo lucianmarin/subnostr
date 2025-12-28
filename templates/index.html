@@ -53,7 +53,9 @@
                         </span>
                     </a>
                 </div>
-                <div class="parent-note-content">{{ note.parent_post.content | linkify_images | safe }}</div>
+                <a href="/post/{{ note.parent_post.id }}" style="text-decoration: none; color: inherit;">
+                    <div class="parent-note-content">{{ note.parent_post.content | format_content | linkify_images | safe }}</div>
+                </a>
             </div>
             {% endif %}
             <div class="note-header">
@@ -76,11 +78,13 @@
                             {% endif %}
                         </span>
                     </a>
-                    <span class="note-date" title="{{ note.timestamp }}">{{ note.created_at | time_ago }}</span>
+                    <a href="/post/{{ note.id }}" class="note-date-link" title="{{ note.timestamp }}" style="text-decoration: none; color: inherit;">
+                        <span class="note-date">{{ note.created_at | time_ago }}</span>
+                    </a>
                 </div>
             </div>
             <div class="note-content">
-                {{ note.content | linkify_images | safe }}
+                {{ note.content | format_content | linkify_images | safe }}
             </div>
         </div>
         {% endfor %}

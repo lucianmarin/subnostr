@@ -50,6 +50,16 @@ def time_ago(timestamp: int) -> str:
     years = days / 365.25
     return f"{int(years)}y ago"
 
+def format_content(text: str) -> str:
+    if not text:
+        return ""
+    lines = text.split('\n')
+    paragraphs = []
+    for line in lines:
+        if line.strip():
+            paragraphs.append(f'<p>{line.strip()}</p>')
+    return "".join(paragraphs)
+
 def linkify_images(text: str) -> str:
     if not text:
         return ""
@@ -59,12 +69,13 @@ def linkify_images(text: str) -> str:
     
     def replace_with_img(match):
         url = match.group(1)
-        return f'<br><img src="{url}" style="max-width: 100%; border-radius: 5px; margin-top: 10px;" loading="lazy"><br>'
+        return f'<img src="{url}" style="max-width: 100%; border-radius: 5px; margin-top: 10px; display: block;" loading="lazy">'
 
     return re.sub(url_pattern, replace_with_img, text, flags=re.IGNORECASE)
 
 templates.env.filters["linkify_images"] = linkify_images
 templates.env.filters["time_ago"] = time_ago
+templates.env.filters["format_content"] = format_content
 
 @app.get("/")
 async def index(request: Request):
@@ -317,6 +328,48 @@ async def post_submit(request: Request, content: str = Form(...), nsec: Optional
             "error": f"Error publishing note: {str(e)}",
             "logged_in": request.cookies.get("user_nsec") is not None
         })
+
+@app.get("/post/{note_id}")
+async def view_post(request: Request, note_id: str):
+    user_nsec = request.cookies.get("user_nsec")
+    post, replies = await nostr_manager.get_post_with_replies(note_id)
+    
+    if not post:
+        return templates.TemplateResponse("index.html", {
+            "request": request,
+            "events": [],
+            "logged_in": user_nsec is not None,
+            "title": "Post Not Found",
+            "error": "Could not find the requested post."
+        })
+
+    return templates.TemplateResponse("view_post.html", {
+        "request": request,
+        "post": post,
+        "replies": replies,
+        "logged_in": user_nsec is not None,
+        "title": "Post Detail"
+    })
+
+@app.post("/post/{note_id}/reply")
+async def reply_submit(request: Request, note_id: str, content: str = Form(...), nsec: Optional[str] = Form(None)):
+    user_nsec = nsec or request.cookies.get("user_nsec")
+
+    if not user_nsec:
+        # Redirect to login or show error on the same page? 
+        # For simplicity, redirect to the post page with an error is harder with current setup.
+        # Let's just redirect to login if not authenticated.
+        return RedirectResponse(url="/login", status_code=303)
+
+    try:
+        keys = Keys.parse(user_nsec)
+        await nostr_manager.publish_note(content, keys, reply_to_id=note_id)
+        # Give some time for relays to process before redirecting? 
+        # Actually, let's just redirect and hope for the best (standard web nostr behavior)
+        return RedirectResponse(url=f"/post/{note_id}", status_code=303)
+    except Exception as e:
+        print(f"Error publishing reply: {e}")
+        return RedirectResponse(url=f"/post/{note_id}", status_code=303)
 
 @app.get("/login")
 async def login_page(request: Request):
