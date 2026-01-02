@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 from typing import Optional
 from app.client import nostr_manager
 from app.utils import get_context
-from app.filters import time_ago, format_content, linkify_images, linkify_urls
+from app.filters import time_ago, format_content, linkify_images, linkify_urls, linkify_nostr
 from nostr_sdk import Keys
 
 router = APIRouter()
@@ -15,6 +15,7 @@ templates.env.filters["linkify_images"] = linkify_images
 templates.env.filters["time_ago"] = time_ago
 templates.env.filters["format_content"] = format_content
 templates.env.filters["linkify_urls"] = linkify_urls
+templates.env.filters["linkify_nostr"] = linkify_nostr
 
 # Feed Routes
 @router.get("/")

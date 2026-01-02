@@ -55,7 +55,7 @@
                 {% if note.kind == 7 %}
                      <!-- Liked content is usually just "+" or empty -->
                 {% else %}
-                    {{ note.content | format_content | linkify_images | linkify_urls | safe }}
+                    {{ note.content | format_content | linkify_images | linkify_urls | linkify_nostr | safe }}
                 {% endif %}
             </div>
 
@@ -80,7 +80,7 @@
                     <span style="font-size: 0.8em; color: #666; margin-left: 5px;">{{ note.parent_post.created_at | time_ago }}</span>
                 </div>
                 <a href="/post/{{ note.parent_post.id }}" class="author-link" style="text-decoration: none; color: inherit;">
-                    <div class="parent-note-content">{{ note.parent_post.content | format_content | linkify_images | linkify_urls | safe }}</div>
+                    <div class="parent-note-content">{{ note.parent_post.content | format_content | linkify_images | linkify_urls | linkify_nostr | safe }}</div>
                 </a>
             </div>
             {% endif %}

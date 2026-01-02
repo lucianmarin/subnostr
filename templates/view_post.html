@@ -34,7 +34,7 @@
 
         <div class="note-body" id="body-{{ note.id }}">
             <div class="note-content">
-                {{ note.content | format_content | linkify_images | linkify_urls | safe }}
+                {{ note.content | format_content | linkify_images | linkify_urls | linkify_nostr | safe }}
             </div>
 
             {% if note.replies %}
@@ -71,7 +71,7 @@
                 </a>
             </div>
             <a href="/post/{{ post.parent_post.id }}" class="author-link">
-                <div class="parent-note-content">{{ post.parent_post.content | format_content | linkify_images | linkify_urls | safe }}</div>
+                <div class="parent-note-content">{{ post.parent_post.content | format_content | linkify_images | linkify_urls | linkify_nostr | safe }}</div>
             </a>
         </div>
         {% endif %}
@@ -106,7 +106,7 @@
                 </div>
             </div>
             <div class="note-content main-post-content">
-                {{ post.content | format_content | linkify_images | linkify_urls | safe }}
+                {{ post.content | format_content | linkify_images | linkify_urls | linkify_nostr | safe }}
             </div>
         </div>
 

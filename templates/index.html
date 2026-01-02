@@ -67,7 +67,7 @@
                     </a>
                 </div>
                 <a href="/post/{{ note.parent_post.id }}" class="author-link">
-                    <div class="parent-note-content">{{ note.parent_post.content | format_content | linkify_images | linkify_urls | safe }}</div>
+                    <div class="parent-note-content">{{ note.parent_post.content | format_content | linkify_images | linkify_urls | linkify_nostr | safe }}</div>
                 </a>
             </div>
             {% endif %}
@@ -100,7 +100,7 @@
                 </div>
             </div>
             <div class="note-content">
-                {{ note.content | format_content | linkify_images | linkify_urls | safe }}
+                {{ note.content | format_content | linkify_images | linkify_urls | linkify_nostr | safe }}
             </div>
         </div>
         {% endfor %}

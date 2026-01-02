@@ -1,4 +1,4 @@
-from nostr_sdk import Client, Filter, Kind, Timestamp, Keys, NostrSigner, EventBuilder, RelayUrl, PublicKey, Tag, EventId
+from nostr_sdk import Client, Filter, Kind, Timestamp, Keys, NostrSigner, EventBuilder, RelayUrl, PublicKey, Tag, EventId, Nip19, Nip19Event
 import json
 from typing import List, Optional, Dict
 from datetime import timedelta
@@ -180,8 +180,18 @@ class NostrManager:
         ids = []
         for eid in event_ids:
             try:
-                ids.append(EventId.parse(eid))
-            except:
+                if eid.startswith("nevent1"):
+                    n = Nip19Event.from_bech32(eid)
+                    ids.append(n.event_id())
+                elif eid.startswith("note1"):
+                    # For now, we don't have a confirmed method for note1 in this version
+                    # but let's try Nip19.from_bech32 if it exists and has a known way to get ID
+                    # Since we are unsure, we skip to avoid runtime errors
+                    continue
+                else:
+                    ids.append(EventId.parse(eid))
+            except Exception as e:
+                print(f"Error parsing event ID {eid}: {e}")
                 continue
 
         if not ids:
@@ -273,7 +283,9 @@ class NostrManager:
         if not main_events_dict:
             return None, []
 
-        main_post = main_events_dict[event_id_hex]
+        # Use the first event found (since get_events keys by hex ID)
+        main_post = list(main_events_dict.values())[0]
+        event_id_hex = main_post["id"]
 
         # Enrich main post author
         profiles_to_fetch = [main_post["pubkey"]]

@@ -66,3 +66,15 @@ def linkify_urls(text: str) -> str:
         return f'<a href="{clean_url}" target="_blank" rel="noopener noreferrer" class="note-link">{clean_url}</a>{trailing}'
 
     return re.sub(url_pattern, replace, text, flags=re.IGNORECASE)
+
+def linkify_nostr(text: str) -> str:
+    if not text:
+        return ""
+    # Match nostr:nevent1..., but skip if already in href="..." or src="..."
+    pattern = r'(?<!href=")(?<!src=")nostr:(nevent1[a-z0-9]+)'
+    
+    def replace(match):
+        bech32 = match.group(1)
+        return f'<a href="/post/{bech32}" class="nostr-link">nostr:{bech32}</a>'
+
+    return re.sub(pattern, replace, text, flags=re.IGNORECASE)
