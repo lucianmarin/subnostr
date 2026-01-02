@@ -1,0 +1,23 @@
+[Unit]
+Description=Subnostr service
+After=network.target nginx.service
+
+[Service]
+User=lucian
+Group=lucian
+PIDFile=/home/lucian/subnostr/nostr.pid
+RuntimeDirectory=uvicorn
+WorkingDirectory=/home/lucian/subnostr
+ExecStart=/home/lucian/subnostr/venv/bin/uvicorn main:app --uds nostr.socket
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s TERM $MAINPID
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target
+
+# sudo cp sub.service /etc/systemd/system/sub.service
+# sudo systemctl daemon-reload
+# sudo systemctl restart sub.service
+# start on boot
+# sudo systemctl enable sub.service
