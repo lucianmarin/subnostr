@@ -16,8 +16,8 @@ PrivateTmp=true
 [Install]
 WantedBy=default.target
 
-# sudo cp sub.service /etc/systemd/system/sub.service
+# sudo cp nostr.service /etc/systemd/system/nostr.service
 # sudo systemctl daemon-reload
-# sudo systemctl restart sub.service
+# sudo systemctl restart nostr.service
 # start on boot
-# sudo systemctl enable sub.service
+# sudo systemctl enable nostr.service
