@@ -1,24 +1,24 @@
 :root {
-    --bg-primary: #f4f4f9;
+    --bg-primary: #f5f5f5;
     --bg-secondary: #fff;
-    --bg-tertiary: #f8f9fa;
-    --bg-sidebar: #333;
+    --bg-tertiary: #e8e8e8;
+    --bg-sidebar: #e0e0e0;
     --text-primary: #333;
     --text-secondary: #777;
     --text-muted: #888;
-    --text-sidebar: #fff;
-    --text-sidebar-muted: #ccc;
-    --border-color: #ddd;
+    --text-sidebar: #333;
+    --text-sidebar-muted: #666;
+    --border-color: #ccc;
     --border-hover: #eee;
     --accent-color: #007bff;
     --accent-hover: #0056b3;
     --accent-text: #fff;
-    --shadow: 0 2px 4px rgba(0,0,0,0.05);
-    --shadow-lg: 0 2px 8px rgba(0,0,0,0.1);
+    --shadow: none;
+    --shadow-lg: none;
     --avatar-placeholder: #e0e0e0;
     --avatar-text: #777;
-    --sidebar-hover: rgba(255,255,255,0.1);
-    --sidebar-border: #444;
+    --sidebar-hover: rgba(0,0,0,0.05);
+    --sidebar-border: #ccc;
 }
 
 [data-theme="dark"] {
@@ -36,8 +36,8 @@
     --accent-color: #3b82f6;
     --accent-hover: #2563eb;
     --accent-text: #fff;
-    --shadow: 0 2px 4px rgba(0,0,0,0.3);
-    --shadow-lg: 0 2px 8px rgba(0,0,0,0.5);
+    --shadow: none;
+    --shadow-lg: none;
     --avatar-placeholder: #333;
     --avatar-text: #888;
     --sidebar-hover: rgba(255,255,255,0.08);
@@ -71,7 +71,6 @@ body {
     display: flex;
     flex-direction: column;
     padding: 20px;
-    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
     overflow-y: auto;
     transition: background 0.3s;
 }
@@ -310,7 +309,6 @@ button:hover {
     }
     .sidebar {
         padding: 10px 8px;
-        box-shadow: 2px 0 5px rgba(0,0,0,0.1);
         z-index: 10;
         grid-column: 1;
         grid-row: 1;
@@ -443,7 +441,7 @@ button:hover {
     border-left: 3px solid var(--border-color);
     padding: 10px 12px;
     margin-bottom: 12px;
-    border-radius: 0 4px 4px 0;
+    border-radius: 8px;
     font-size: 14px;
     transition: background 0.3s;
 }
@@ -619,7 +617,6 @@ button:hover {
     border: 1px solid var(--border-hover);
     margin-bottom: 8px;
     padding: 10px;
-    box-shadow: none;
     transition: background 0.3s, border 0.3s;
 }
 
