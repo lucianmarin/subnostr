@@ -306,7 +306,7 @@ async def login_submit(request: Request, nsec: str = Form(...)):
     try:
         Keys.parse(nsec)
         response = RedirectResponse(url="/", status_code=303)
-        response.set_cookie(key="user_nsec", value=nsec, httponly=True, samesite="lax")
+        response.set_cookie(key="user_nsec", value=nsec, httponly=True, samesite="lax", max_age=31536000)
         return response
     except Exception as e:
         ctx = await get_context(request)

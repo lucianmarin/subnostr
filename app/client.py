@@ -1,4 +1,4 @@
-from nostr_sdk import Client, Filter, Kind, Timestamp, Keys, NostrSigner, EventBuilder, RelayUrl, PublicKey, Tag, EventId, Nip19, Nip19Event
+from nostr_sdk import Client, Filter, Kind, Timestamp, Keys, NostrSigner, EventBuilder, RelayUrl, PublicKey, Tag, EventId, Nip19Event
 import json
 from typing import List, Optional, Dict
 from datetime import timedelta
