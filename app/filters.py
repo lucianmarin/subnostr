@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import re
+from nostr_sdk import PublicKey, Nip19Profile
 
 def time_ago(timestamp: int) -> str:
     now = datetime.now(timezone.utc).timestamp()
@@ -70,11 +71,32 @@ def linkify_urls(text: str) -> str:
 def linkify_nostr(text: str) -> str:
     if not text:
         return ""
-    # Match nostr:nevent1..., but skip if already in href="..." or src="..."
-    pattern = r'(?<!href=")(?<!src=")nostr:(nevent1[a-z0-9]+)'
     
-    def replace(match):
-        bech32 = match.group(1)
-        return f'<a href="/post/{bech32}" class="nostr-link">nostr:{bech32}</a>'
+    # Match nostr:nevent1...
+    text = re.sub(
+        r'(?<!href=")(?<!src=")nostr:(nevent1[a-z0-9]+)', 
+        lambda m: f'<a href="/post/{m.group(1)}" class="nostr-link">nostr:{m.group(1)}</a>', 
+        text, 
+        flags=re.IGNORECASE
+    )
 
-    return re.sub(pattern, replace, text, flags=re.IGNORECASE)
+    # Match nostr:nprofile1...
+    def replace_nprofile(match):
+        bech32 = match.group(1)
+        try:
+            profile = Nip19Profile.from_bech32(bech32)
+            pk = profile.public_key()
+            npub = pk.to_bech32()
+            pubkey = pk.to_hex()
+            return f'<a href="/user/{pubkey}" class="nostr-link">nostr:{npub}</a>'
+        except Exception:
+            return f'<a href="/user/{bech32}" class="nostr-link">nostr:{bech32}</a>'
+
+    text = re.sub(
+        r'(?<!href=")(?<!src=")nostr:(nprofile1[a-z0-9]+)', 
+        replace_nprofile, 
+        text, 
+        flags=re.IGNORECASE
+    )
+
+    return text

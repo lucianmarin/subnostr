@@ -1,4 +1,4 @@
-from nostr_sdk import Client, Filter, Kind, Timestamp, Keys, NostrSigner, EventBuilder, RelayUrl, PublicKey, Tag, EventId, Nip19Event
+from nostr_sdk import Client, Filter, Kind, Timestamp, Keys, NostrSigner, EventBuilder, RelayUrl, PublicKey, Tag, EventId, Nip19Event, Nip19Profile
 import json
 from typing import List, Optional, Dict
 from datetime import timedelta
@@ -108,7 +108,10 @@ class NostrManager:
         await self.start()
         try:
             print(f"Fetching contact list for {pubkey_hex}")
-            pk = PublicKey.parse(pubkey_hex)
+            if pubkey_hex.startswith("nprofile1"):
+                pk = Nip19Profile.from_bech32(pubkey_hex).public_key()
+            else:
+                pk = PublicKey.parse(pubkey_hex)
 
             # Fetch Kind 3 (Contact List) - remove limit to get all and find the latest
             f = Filter().kind(Kind(3)).author(pk)
@@ -263,7 +266,11 @@ class NostrManager:
     async def get_user_posts(self, pubkey_hex: str, limit: int = 20, until: Optional[int] = None):
         await self.start()
         try:
-            pk = PublicKey.parse(pubkey_hex)
+            if pubkey_hex.startswith("nprofile1"):
+                pk = Nip19Profile.from_bech32(pubkey_hex).public_key()
+            else:
+                pk = PublicKey.parse(pubkey_hex)
+            
             f = Filter().kind(Kind(1)).author(pk).limit(limit)
             if until:
                 f = f.until(Timestamp.from_secs(until))
@@ -434,6 +441,11 @@ class NostrManager:
         await pub_client.disconnect()
 
     async def follow(self, keys: Keys, follow_pubkey_hex: str):
+        if follow_pubkey_hex.startswith("nprofile1"):
+            try:
+                follow_pubkey_hex = Nip19Profile.from_bech32(follow_pubkey_hex).public_key().to_hex()
+            except:
+                pass
         await self.start()
         print(f"Follow request for {follow_pubkey_hex}")
         # 1. Fetch current contact list
@@ -480,6 +492,11 @@ class NostrManager:
             print(f"Already following {follow_pubkey_hex} and self is included")
 
     async def unfollow(self, keys: Keys, unfollow_pubkey_hex: str):
+        if unfollow_pubkey_hex.startswith("nprofile1"):
+            try:
+                unfollow_pubkey_hex = Nip19Profile.from_bech32(unfollow_pubkey_hex).public_key().to_hex()
+            except:
+                pass
         await self.start()
         print(f"Unfollow request for {unfollow_pubkey_hex}")
         # 1. Fetch current contact list
@@ -526,7 +543,13 @@ class NostrManager:
         await self.start()
         try:
             print(f"Fetching followers for {pubkey_hex}")
-            pk = PublicKey.parse(pubkey_hex)
+            if pubkey_hex.startswith("nprofile1"):
+                pk = Nip19Profile.from_bech32(pubkey_hex).public_key()
+            else:
+                pk = PublicKey.parse(pubkey_hex)
+            
+            # Normalize to hex for tag comparison
+            pubkey_hex = pk.to_hex()
 
             # Fetch Kind 3 events (contact lists) that tag this user
             f = Filter().kind(Kind(3)).pubkey(pk).limit(500) # Limit to 500 followers for performance
@@ -571,7 +594,11 @@ class NostrManager:
     async def get_notifications(self, pubkey_hex: str, limit: int = 20, until: Optional[int] = None):
         await self.start()
         try:
-            pk = PublicKey.parse(pubkey_hex)
+            if pubkey_hex.startswith("nprofile1"):
+                pk = Nip19Profile.from_bech32(pubkey_hex).public_key()
+            else:
+                pk = PublicKey.parse(pubkey_hex)
+            
             # Filter for Kind 1 (Text) and Kind 7 (Reaction) where the 'p' tag is the user
             f = Filter().kinds([Kind(1), Kind(7)]).pubkey(pk).limit(limit)
 
@@ -611,7 +638,10 @@ class NostrManager:
         pks = []
         for pk in missing_pks:
             try:
-                pks.append(PublicKey.parse(pk))
+                if pk.startswith("nprofile1"):
+                    pks.append(Nip19Profile.from_bech32(pk).public_key())
+                else:
+                    pks.append(PublicKey.parse(pk))
             except:
                 continue
 
