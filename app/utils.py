@@ -15,7 +15,7 @@ async def get_context(request: Request) -> dict:
             # Fetch user profile for sidebar
             profiles = await nostr_manager.get_profiles([user_pubkey])
             user_profile = profiles.get(user_pubkey)
-        except:
+        except Exception:
             pass
     return {
         "request": request,

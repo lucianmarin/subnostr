@@ -64,7 +64,7 @@ class NostrManager:
         for r in results:
             try:
                 event_ids.append(EventId.parse(r["id"]))
-            except:
+            except Exception:
                 continue
 
         if not event_ids:
@@ -157,7 +157,7 @@ class NostrManager:
         for author in authors:
             try:
                 public_keys.append(PublicKey.parse(author))
-            except:
+            except Exception:
                 continue
 
         if not public_keys:
@@ -433,7 +433,7 @@ class NostrManager:
 
         event = EventBuilder.text_note(content).tags(tags).sign_with_keys(keys)
         try:
-            event_id = await pub_client.send_event(event)
+            await pub_client.send_event(event)
             print("Published note")
         except Exception as e:
             await pub_client.disconnect()
@@ -444,7 +444,7 @@ class NostrManager:
         if follow_pubkey_hex.startswith("nprofile1"):
             try:
                 follow_pubkey_hex = Nip19Profile.from_bech32(follow_pubkey_hex).public_key().to_hex()
-            except:
+            except Exception:
                 pass
         await self.start()
         print(f"Follow request for {follow_pubkey_hex}")
@@ -495,7 +495,7 @@ class NostrManager:
         if unfollow_pubkey_hex.startswith("nprofile1"):
             try:
                 unfollow_pubkey_hex = Nip19Profile.from_bech32(unfollow_pubkey_hex).public_key().to_hex()
-            except:
+            except Exception:
                 pass
         await self.start()
         print(f"Unfollow request for {unfollow_pubkey_hex}")
@@ -642,7 +642,7 @@ class NostrManager:
                     pks.append(Nip19Profile.from_bech32(pk).public_key())
                 else:
                     pks.append(PublicKey.parse(pk))
-            except:
+            except Exception:
                 continue
 
         if not pks:
@@ -663,7 +663,7 @@ class NostrManager:
                 content = json.loads(event.content())
                 self._profiles_cache[author] = content
                 results[author] = content
-            except:
+            except Exception:
                 continue
 
         return results

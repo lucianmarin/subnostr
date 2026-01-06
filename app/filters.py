@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 import re
-from nostr_sdk import PublicKey, Nip19Profile
+from nostr_sdk import Nip19Profile
 
 def time_ago(timestamp: int) -> str:
     now = datetime.now(timezone.utc).timestamp()
