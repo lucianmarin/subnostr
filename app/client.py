@@ -183,18 +183,8 @@ class NostrManager:
         ids = []
         for eid in event_ids:
             try:
-                if eid.startswith("nevent1"):
-                    n = Nip19Event.from_bech32(eid)
-                    ids.append(n.event_id())
-                elif eid.startswith("note1"):
-                    # For now, we don't have a confirmed method for note1 in this version
-                    # but let's try Nip19.from_bech32 if it exists and has a known way to get ID
-                    # Since we are unsure, we skip to avoid runtime errors
-                    continue
-                else:
-                    ids.append(EventId.parse(eid))
-            except Exception as e:
-                print(f"Error parsing event ID {eid}: {e}")
+                ids.append(EventId.parse(eid))
+            except Exception:
                 continue
 
         if not ids:
@@ -270,7 +260,7 @@ class NostrManager:
                 pk = Nip19Profile.from_bech32(pubkey_hex).public_key()
             else:
                 pk = PublicKey.parse(pubkey_hex)
-            
+
             f = Filter().kind(Kind(1)).author(pk).limit(limit)
             if until:
                 f = f.until(Timestamp.from_secs(until))
@@ -547,7 +537,7 @@ class NostrManager:
                 pk = Nip19Profile.from_bech32(pubkey_hex).public_key()
             else:
                 pk = PublicKey.parse(pubkey_hex)
-            
+
             # Normalize to hex for tag comparison
             pubkey_hex = pk.to_hex()
 
@@ -598,7 +588,7 @@ class NostrManager:
                 pk = Nip19Profile.from_bech32(pubkey_hex).public_key()
             else:
                 pk = PublicKey.parse(pubkey_hex)
-            
+
             # Filter for Kind 1 (Text) and Kind 7 (Reaction) where the 'p' tag is the user
             f = Filter().kinds([Kind(1), Kind(7)]).pubkey(pk).limit(limit)
 

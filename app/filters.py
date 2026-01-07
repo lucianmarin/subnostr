@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 import re
-from nostr_sdk import Nip19Profile
+from nostr_sdk import Nip19Profile, Nip19Event
 
 def time_ago(timestamp: int) -> str:
     now = datetime.now(timezone.utc).timestamp()
@@ -8,27 +8,27 @@ def time_ago(timestamp: int) -> str:
 
     if diff < 60:
         return f"{int(diff)}s ago" if diff > 1 else "just now"
-    
+
     minutes = diff / 60
     if minutes < 60:
         return f"{int(minutes)}m ago"
-    
+
     hours = minutes / 60
     if hours < 24:
         return f"{int(hours)}h ago"
-    
+
     days = hours / 24
     if days < 7:
         return f"{int(days)}d ago"
-    
+
     weeks = days / 7
     if weeks < 4:
         return f"{int(weeks)}w ago"
-    
+
     months = days / 30.44  # Average month length
     if months < 12:
         return f"{int(months)}mo ago"
-    
+
     years = days / 365.25
     return f"{int(years)}y ago"
 
@@ -47,7 +47,7 @@ def linkify_images(text: str) -> str:
         return ""
     # More robust regex to find image URLs
     url_pattern = r'(https?://[^\s<>"]+?\.(?:jpg|jpeg|png|gif))'
-    
+
     def replace_with_img(match):
         url = match.group(1)
         return f'<img src="{url}" class="embedded-image" loading="lazy">'
@@ -59,7 +59,7 @@ def linkify_urls(text: str) -> str:
         return ""
     # Match URLs but skip those already in src="..." or href="..."
     url_pattern = r'(?<!src=")(?<!href=")(https?://[^\s<>"]+)'
-    
+
     def replace(match):
         url = match.group(1)
         clean_url = url.rstrip('.,;!?')
@@ -71,12 +71,21 @@ def linkify_urls(text: str) -> str:
 def linkify_nostr(text: str) -> str:
     if not text:
         return ""
-    
+
     # Match nostr:nevent1...
+    def replace_nevent(match):
+        bech32 = match.group(1)
+        try:
+            nevent = Nip19Event.from_bech32(bech32)
+            event_id_hex = nevent.event_id().to_hex()
+            return f'<a href="/post/{event_id_hex}" class="nostr-link">nostr:{bech32}</a>'
+        except Exception:
+            return f'<a href="/post/{bech32}" class="nostr-link">nostr:{bech32}</a>'
+
     text = re.sub(
-        r'(?<!href=")(?<!src=")nostr:(nevent1[a-z0-9]+)', 
-        lambda m: f'<a href="/post/{m.group(1)}" class="nostr-link">nostr:{m.group(1)}</a>', 
-        text, 
+        r'(?<!href=")(?<!src=")nostr:(nevent1[a-z0-9]+)',
+        replace_nevent,
+        text,
         flags=re.IGNORECASE
     )
 
@@ -93,9 +102,9 @@ def linkify_nostr(text: str) -> str:
             return f'<a href="/user/{bech32}" class="nostr-link">nostr:{bech32}</a>'
 
     text = re.sub(
-        r'(?<!href=")(?<!src=")nostr:(nprofile1[a-z0-9]+)', 
-        replace_nprofile, 
-        text, 
+        r'(?<!href=")(?<!src=")nostr:(nprofile1[a-z0-9]+)',
+        replace_nprofile,
+        text,
         flags=re.IGNORECASE
     )
 
