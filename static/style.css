@@ -676,14 +676,6 @@ button:hover {
     color: inherit;
 }
 
-.reply-count {
-    margin-left: 10px;
-    color: var(--text-muted);
-    font-size: 14px;
-    text-decoration: none;
-    vertical-align: middle;
-}
-
 .pagination-container {
     text-align: center;
     margin-top: 20px;

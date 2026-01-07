@@ -1,4 +1,4 @@
-from nostr_sdk import Client, Filter, Kind, Timestamp, Keys, NostrSigner, EventBuilder, RelayUrl, PublicKey, Tag, EventId, Nip19Event, Nip19Profile
+from nostr_sdk import Client, Filter, Kind, Timestamp, Keys, NostrSigner, EventBuilder, RelayUrl, PublicKey, Tag, EventId, Nip19Profile
 import json
 from typing import List, Optional, Dict
 from datetime import timedelta
@@ -56,41 +56,6 @@ class NostrManager:
             results.append(data)
         return results
 
-    async def _enrich_with_reply_counts(self, results):
-        if not results:
-            return results
-
-        event_ids = []
-        for r in results:
-            try:
-                event_ids.append(EventId.parse(r["id"]))
-            except Exception:
-                continue
-
-        if not event_ids:
-            return results
-
-        # Fetch all Kind 1 events tagging these IDs
-        f = Filter().kind(Kind(1)).events(event_ids)
-        reply_events = await self.client.fetch_events(f, timedelta(seconds=5))
-
-        # Count replies for each ID
-        counts = {r["id"]: 0 for r in results}
-        for e in reply_events.to_vec():
-            # Check 'e' tags to see which event is being replied to
-            for tag in e.tags().to_vec():
-                t = tag.as_vec()
-                if len(t) >= 2 and t[0] == "e":
-                    target_id = t[1]
-                    if target_id in counts:
-                        counts[target_id] += 1
-                        break # Count only once per event
-
-        for r in results:
-            r["reply_count"] = counts.get(r["id"], 0)
-
-        return results
-
     async def get_global_feed(self, limit: int = 20, until: Optional[int] = None):
         await self.start()
         # Filter for text notes (Kind 1)
@@ -102,7 +67,7 @@ class NostrManager:
         enriched = await self._enrich_events(events.to_vec())
         enriched = enriched[:limit]
         with_parents = await self._enrich_with_parents(enriched)
-        return await self._enrich_with_reply_counts(with_parents)
+        return with_parents
 
     async def get_following_list(self, pubkey_hex: str) -> List[str]:
         await self.start()
@@ -172,7 +137,7 @@ class NostrManager:
 
         enriched = await self._enrich_events(events.to_vec())
         with_parents = await self._enrich_with_parents(enriched)
-        return await self._enrich_with_reply_counts(with_parents)
+        return with_parents
 
     async def get_events(self, event_ids: List[str]) -> Dict[str, dict]:
         await self.start()
@@ -268,7 +233,7 @@ class NostrManager:
             events = await self.client.fetch_events(f, timedelta(seconds=5))
             enriched = await self._enrich_events(events.to_vec())
             with_parents = await self._enrich_with_parents(enriched)
-            return await self._enrich_with_reply_counts(with_parents)
+            return with_parents
         except Exception as e:
             print(f"Error fetching user posts: {e}")
             return []
@@ -359,10 +324,6 @@ class NostrManager:
             for node in nodes.values():
                 node["replies"].sort(key=lambda x: x["created_at"])
 
-            # Enrich all collected nodes with reply counts
-            all_nodes = list(nodes.values())
-            await self._enrich_with_reply_counts(all_nodes)
-
             return main_post, main_post["replies"]
 
         except Exception as e:
@@ -374,7 +335,6 @@ class NostrManager:
                 main_post["author_name"] = p.get("display_name") or p.get("name")
                 main_post["author_picture"] = p.get("picture")
 
-            await self._enrich_with_reply_counts([main_post])
             return main_post, []
 
     async def publish_note(self, content: str, keys: Keys, reply_to_id: Optional[str] = None):

@@ -93,9 +93,6 @@
                     </a>
                     <a href="/post/{{ note.id }}" class="note-date-link" title="{{ note.timestamp }}">
                         <span class="note-date">{{ note.created_at | time_ago }}</span>
-                        {% if note.reply_count > 0 %}
-                            <span class="reply-count" aria-label="View replies">💬 {{ note.reply_count }}</span>
-                        {% endif %}
                     </a>
                 </div>
             </div>

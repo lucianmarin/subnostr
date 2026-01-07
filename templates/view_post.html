@@ -24,9 +24,6 @@
                 </a>
                 <a href="/post/{{ note.id }}" class="note-date-link" title="{{ note.timestamp }}">
                     <span class="note-date">{{ note.created_at | time_ago }}</span>
-                    {% if note.reply_count > 0 %}
-                        <span class="reply-count" aria-label="View replies">💬 {{ note.reply_count }}</span>
-                    {% endif %}
                 </a>
             </div>
             <button class="collapse-toggle" onclick="toggleNote('{{ note.id }}')" title="Collapse/Expand">[-]</button>
@@ -99,9 +96,6 @@
                     </a>
                     <a href="/post/{{ post.id }}" class="note-date-link" title="{{ post.timestamp }}">
                         <span class="note-date">{{ post.created_at | time_ago }}</span>
-                        {% if post.reply_count > 0 %}
-                            <span class="reply-count" aria-label="View replies">💬 {{ post.reply_count }}</span>
-                        {% endif %}
                     </a>
                 </div>
             </div>
