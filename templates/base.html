@@ -1,88 +1,77 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nostr Web Client</title>
     <link rel="stylesheet" href="/static/style.css?v={{ v }}">
 </head>
+
 <body>
     <div class="app-layout">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                {% if logged_in and user_pubkey %}
-                <div class="sidebar-profile">
-                    <a href="/user/{{ user_pubkey }}" class="sidebar-profile-link">
-                        {% if user_profile and user_profile.picture %}
-                            <img src="{{ user_profile.picture }}" class="sidebar-avatar" alt="Avatar">
-                        {% else %}
-                            <div class="sidebar-avatar-placeholder">{{ user_pubkey[:2] }}</div>
-                        {% endif %}
-                    </a>
-                </div>
-                {% endif %}
-            </div>
-
-            <nav>
-                {% if logged_in %}
-                    <a href="/feed" class="nav-item">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-                        </svg>
-                        <span>My Feed</span>
-                    </a>
-                    <a href="/notifications" class="nav-item">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-                        </svg>
-                        <span>Notifications</span>
-                    </a>
-                    <a href="/following" class="nav-item">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
-                        </svg>
-                        <span>Following</span>
-                    </a>
-                    <a href="/followers" class="nav-item">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-                        </svg>
-                        <span>Followers</span>
-                    </a>
-                {% endif %}
-                <a href="/global" class="nav-item">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                    </svg>
-                    <span>Global Feed</span>
-                </a>
-                <a href="/post" class="nav-item">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                    <span>Post</span>
-                </a>
-                {% if logged_in %}
-                    <a href="/logout" class="nav-item">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-                        </svg>
-                        <span>Logout</span>
-                    </a>
-                {% else %}
-                    <a href="/login" class="nav-item">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                        </svg>
-                        <span>Login</span>
-                    </a>
-                {% endif %}
-            </nav>
-        </aside>
-
         <main class="content-area">
             {% block content %}{% endblock %}
         </main>
+        <aside class="sidebar">
+            <nav class="bottom-nav">
+                <a href="/global" class="nav-item {% if request.path == '/global' %}active{% endif %}"
+                    aria-label="Global Feed">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                    </svg>
+                </a>
+
+                {% if logged_in %}
+                <a href="/feed" class="nav-item {% if request.path == '/feed' %}active{% endif %}" aria-label="My Feed">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                    </svg>
+                </a>
+
+                <a href="/post" class="nav-item {% if request.path == '/post' %}active{% endif %}" aria-label="Post">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                </a>
+
+                <a href="/notifications" class="nav-item {% if request.path == '/notifications' %}active{% endif %}"
+                    aria-label="Notifications">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                    </svg>
+                </a>
+
+                {% if user_pubkey %}
+                <a href="/user/{{ user_pubkey }}"
+                    class="nav-item {% if request.path.startswith('/user/' + user_pubkey) %}active{% endif %}"
+                    aria-label="Profile">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                    </svg>
+                </a>
+                {% endif %}
+                {% else %}
+                <a href="/login" class="nav-item {% if request.path == '/login' %}active{% endif %}" aria-label="Login">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                    </svg>
+                </a>
+                {% endif %}
+            </nav>
+        </aside>
     </div>
 </body>
+
 </html>

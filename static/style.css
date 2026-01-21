@@ -11,11 +11,12 @@ html {
     --accent-color: #007bff;
     --accent-hover: #0056b3;
     --accent-text: #fff;
+    --nav-active-color: #a855f7;
     --shadow: none;
     --shadow-lg: none;
     --avatar-placeholder: #e0e0e0;
     --avatar-text: #777;
-    --sidebar-hover: rgba(0,0,0,0.05);
+    --sidebar-hover: rgba(0, 0, 0, 0.05);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -32,11 +33,12 @@ html {
         --accent-color: #3b82f6;
         --accent-hover: #2563eb;
         --accent-text: #fff;
+        --nav-active-color: #c084fc;
         --shadow: none;
         --shadow-lg: none;
         --avatar-placeholder: #333;
         --avatar-text: #888;
-        --sidebar-hover: rgba(255,255,255,0.08);
+        --sidebar-hover: rgba(255, 255, 255, 0.08);
     }
 }
 
@@ -47,116 +49,105 @@ body {
     padding: 0;
     background-color: var(--bg-primary);
     color: var(--text-primary);
-    height: 100vh;
-    overflow: hidden;
+    min-height: 100vh;
     min-width: 320px;
     transition: background-color 0.3s, color 0.3s;
 }
 
 .app-layout {
-    display: grid;
-    grid-template-columns: 250px 1fr;
-    grid-template-rows: 100vh;
-    height: 100vh;
-}
-
-/* Sidebar Styles */
-.sidebar {
-    background: var(--bg-secondary);
-    color: var(--text-sidebar);
     display: flex;
     flex-direction: column;
-    padding: 20px;
-    overflow-y: auto;
+    min-height: 100vh;
+}
+
+/* Sidebar Styles -> Bottom Floating Menu */
+.sidebar {
+    position: fixed;
+    bottom: 20px;
+    z-index: 1000;
+    width: 300px;
+    left: calc(50% - 150px);
+    right: calc(50% - 150px);
+    max-width: 90%;
+    box-sizing: border-box;
+
+    background: var(--bg-secondary);
+    color: var(--text-sidebar);
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 10px 20px;
+
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    /* Capsule shape */
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    /* Floating shadow */
     transition: background 0.3s;
-    border-right: 1px solid var(--border-color);
 }
 
-.sidebar-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.sidebar-profile {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 0 auto;
-}
-
-.sidebar-profile-link {
-    text-decoration: none;
-    color: inherit;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.sidebar-avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid var(--border-color);
-}
-
-.sidebar-avatar-placeholder {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: var(--border-color);
-    color: var(--text-sidebar-muted);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    font-weight: bold;
-    border: 2px solid var(--border-color);
-}
+/* Sidebar Header removed in HTML, styles removed here */
 
 .sidebar nav {
     display: flex;
-    flex-direction: column;
-    flex-grow: 1;
+    flex-direction: row;
+    width: 100%;
+    justify-content: space-around;
+    align-items: center;
 }
 
 .nav-item {
     color: var(--text-sidebar-muted);
     text-decoration: none;
-    padding: 12px 16px;
-    margin-bottom: 4px;
-    border-radius: 8px;
-    transition: background 0.2s, color 0.2s;
+    padding: 12px;
+    margin: 0;
+    border-radius: 50%;
+    /* Circle hover effect */
+    transition: background 0.2s, color 0.2s, transform 0.1s;
     display: flex;
     align-items: center;
-    gap: 12px;
-    font-weight: 500;
+    justify-content: center;
 }
 
 .nav-item:hover {
     background: var(--sidebar-hover);
     color: var(--text-sidebar);
+    transform: translateY(-2px);
+    /* Slight lift on hover */
+}
+
+.nav-item.active {
+    color: var(--nav-active-color);
+}
+
+.nav-item.active svg {
+    stroke-width: 2px;
+    /* Slightly bolder */
 }
 
 .nav-item svg {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     flex-shrink: 0;
 }
 
 .nav-item span {
-    flex: 1;
+    display: none;
+    /* Hide any text if present */
 }
 
 /* Main Content Area */
 .content-area {
-    overflow-y: auto;
     padding: 30px;
+    padding-bottom: 100px;
+    /* Ensure content clears the floating menu */
     transition: background-color 0.3s;
+    max-width: 800px;
+    /* Reasonable reading width since we lost the grid constraint */
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* Helper for content width limitation if needed within main */
@@ -217,7 +208,8 @@ h2 {
     border: 1px solid var(--border-color);
 }
 
-.post-form-container, .login-container {
+.post-form-container,
+.login-container {
     background: var(--bg-secondary);
     padding: 20px;
     border-radius: 8px;
@@ -275,61 +267,9 @@ button:hover {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-    .app-layout {
-        grid-template-columns: auto 1fr;
-        grid-template-rows: 100vh;
-        height: 100vh;
-        overflow: hidden;
-    }
-    .sidebar {
-        padding: 10px 8px;
-        z-index: 10;
-        grid-column: 1;
-        grid-row: 1;
-    }
-    .content-area {
-        grid-column: 2;
-        grid-row: 1;
-        padding: 15px;
-        overflow-y: auto;
-    }
-    .sidebar-header {
-        flex-direction: column;
-        gap: 10px;
-        margin-bottom: 15px;
-        padding-bottom: 15px;
-        align-items: center;
-    }
-    .sidebar-profile {
-        justify-content: center;
-    }
-    .sidebar-profile-link {
-        flex-direction: column;
-    }
-    .theme-toggle {
-        display: none;
-    }
-    .sidebar nav {
-        flex-direction: column;
-        gap: 8px;
-        align-items: center;
-    }
-    .nav-item {
-        padding: 12px;
-        margin-bottom: 0;
-        font-size: 14px;
-        flex: 0 0 auto;
-        min-width: auto;
-        justify-content: center;
-    }
-    .nav-item span {
-        display: none;
-    }
-    .nav-item svg {
-        width: 24px;
-        height: 24px;
-    }
-    .post-form-container, .login-container {
+
+    .post-form-container,
+    .login-container {
         width: 100%;
         padding: 15px;
         box-sizing: border-box;
@@ -339,23 +279,17 @@ button:hover {
 /* Specific tweaks for very small screens */
 @media (max-width: 400px) {
     .sidebar {
-        padding: 8px 6px;
+        padding: 8px 15px;
+        gap: 5px;
     }
-    .sidebar nav {
-        gap: 6px;
-    }
+
     .nav-item {
-        padding: 10px;
+        padding: 8px;
     }
+
     .nav-item svg {
         width: 20px;
         height: 20px;
-    }
-    .sidebar-avatar,
-    .sidebar-avatar-placeholder {
-        width: 40px;
-        height: 40px;
-        font-size: 14px;
     }
 }
 
@@ -447,6 +381,7 @@ button:hover {
     overflow: hidden;
     display: -webkit-box;
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
 }
 
