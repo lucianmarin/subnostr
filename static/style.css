@@ -139,7 +139,8 @@ body {
 
 /* Main Content Area */
 .content-area {
-    padding: 30px;
+    padding: 0 15px;
+    padding-top: 20px;
     padding-bottom: 100px;
     /* Ensure content clears the floating menu */
     transition: background-color 0.3s;

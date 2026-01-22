@@ -16,7 +16,7 @@ templates.env.filters["time_ago"] = time_ago
 templates.env.filters["format_content"] = format_content
 templates.env.filters["linkify_urls"] = linkify_urls
 templates.env.filters["linkify_nostr"] = linkify_nostr
-templates.env.globals['v'] = 2
+templates.env.globals['v'] = 3
 
 # Feed Routes
 @router.get("/")
