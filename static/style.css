@@ -512,8 +512,6 @@ button:hover {
 /* Nested Replies */
 .nested-replies {
     margin-top: 10px;
-    margin-left: 20px;
-    padding-left: 10px;
 }
 
 .nested-replies.limit-depth {
