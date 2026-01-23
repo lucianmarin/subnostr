@@ -539,7 +539,7 @@ button:hover {
 }
 
 .reply-note .note-content {
-    padding-left: 5px;
+    padding-right: 5px;
 }
 
 .reply-note .note-avatar {
