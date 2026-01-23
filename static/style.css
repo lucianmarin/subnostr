@@ -526,7 +526,8 @@ button:hover {
     border-right: 0 none;
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
-    margin-bottom: 8px;
+    margin-bottom: 0;
+    margin-top: 15px;
     padding: 10px;
     padding-right: 0;
     transition: background 0.3s, border 0.3s;
