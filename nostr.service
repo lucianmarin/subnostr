@@ -1,14 +1,14 @@
 [Unit]
-Description=Nostr service
+Description=Subnostr service
 After=network.target nginx.service
 
 [Service]
 User=lucian
 Group=lucian
-PIDFile=/home/lucian/nostr/nostr.pid
+PIDFile=/home/lucian/subnostr/nostr.pid
 RuntimeDirectory=uvicorn
-WorkingDirectory=/home/lucian/nostr
-ExecStart=/home/lucian/nostr/venv/bin/uvicorn main:app --uds nostr.socket
+WorkingDirectory=/home/lucian/subnostr
+ExecStart=/home/lucian/subnostr/venv/bin/uvicorn main:app --uds nostr.socket
 ExecReload=/bin/kill -s HUP $MAINPID
 ExecStop=/bin/kill -s TERM $MAINPID
 PrivateTmp=true

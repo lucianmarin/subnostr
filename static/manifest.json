@@ -1,7 +1,7 @@
 {
     "lang": "en",
-    "name": "Nostr",
-    "short_name": "Nostr",
+    "name": "Subnostr",
+    "short_name": "Subnostr",
     "description": "Web client for Nostr.",
     "icons": [
         {
