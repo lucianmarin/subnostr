@@ -2,7 +2,7 @@
     "lang": "en",
     "name": "Subnostr",
     "short_name": "Subnostr",
-    "description": "Web client for Nostr.",
+    "description": "A web client for Nostr.",
     "icons": [
         {
             "src": "/static/192.png",
