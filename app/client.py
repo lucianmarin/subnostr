@@ -1,4 +1,4 @@
-from nostr_sdk import Client, Filter, Kind, Timestamp, Keys, NostrSigner, EventBuilder, RelayUrl, PublicKey, Tag, EventId, Nip19Profile
+from nostr_sdk import Client, Filter, Kind, Timestamp, Keys, EventBuilder, RelayUrl, PublicKey, Tag, EventId, Nip19Profile, ReqTarget
 import json
 from typing import List, Optional, Dict
 from datetime import timedelta
@@ -6,12 +6,15 @@ from datetime import timedelta
 class NostrManager:
     def __init__(self):
         # Initialize with no signer (read-only)
-        self.client = Client(None)
+        self.client = Client()
         self.relays = [
             "wss://relay.damus.io",
             "wss://nos.lol",
             "wss://nostr.wine",
-            "wss://relay.snort.social"
+            "wss://relay.snort.social",
+            "wss://relay.nostr.band",
+            "wss://nostr.mom",
+            "wss://relay.primal.net"
         ]
         self.connected = False
         self._profiles_cache = {}
@@ -25,16 +28,18 @@ class NostrManager:
 
     def _event_to_dict(self, event):
         tags = []
-        for tag in event.tags().to_vec():
-            tags.append(tag.as_vec())
+        for tag in event.tags():
+            tags.append(tag.to_vec())
 
+        from datetime import datetime, timezone
+        ts = event.created_at().as_secs()
         return {
             "id": event.id().to_hex(),
             "kind": event.kind().as_u16(),
             "content": event.content(),
             "pubkey": event.author().to_hex(),
-            "created_at": event.created_at().as_secs(),
-            "timestamp": event.created_at().to_human_datetime(),
+            "created_at": ts,
+            "timestamp": datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
             "tags": tags
         }
 
@@ -63,8 +68,8 @@ class NostrManager:
         if until:
             f = f.until(Timestamp.from_secs(until))
 
-        events = await self.client.fetch_events(f, timedelta(seconds=5))
-        enriched = await self._enrich_events(events.to_vec())
+        events = await self.client.fetch_events(ReqTarget.auto([f]), timedelta(seconds=5))
+        enriched = await self._enrich_events(events)
         enriched = enriched[:limit]
         with_parents = await self._enrich_with_parents(enriched)
         return with_parents
@@ -81,23 +86,31 @@ class NostrManager:
             # Fetch Kind 3 (Contact List) - remove limit to get all and find the latest
             f = Filter().kind(Kind(3)).author(pk)
 
-            events = await self.client.fetch_events(f, timedelta(seconds=10))
-            print(f"Found {events.len()} contact list events")
+            events = await self.client.fetch_events(ReqTarget.auto([f]), timedelta(seconds=10))
+            print(f"Found {len(events)} contact list events")
 
-            if events.len() == 0:
+            if len(events) == 0:
                 return []
 
             # Build a map of followed pubkey -> most recent event timestamp where it appears
             followed_map = {}  # pubkey -> latest_created_at_secs
-            for event in events.to_vec():
+            for event in events:
                 ts = event.created_at().as_secs()
-                for tag in event.tags().to_vec():
-                    t = tag.as_vec()
+                for tag in event.tags():
+                    t = tag.to_vec()
                     if len(t) >= 2 and t[0] == "p":
-                        pk = t[1]
+                        pk_str = t[1]
+                        # Normalize bech32 pubkeys to hex if needed
+                        try:
+                            if pk_str.startswith("nprofile1"):
+                                pk_str = Nip19Profile.from_bech32(pk_str).public_key().to_hex()
+                            elif pk_str.startswith("npub1"):
+                                pk_str = PublicKey.parse(pk_str).to_hex()
+                        except Exception:
+                            pass
                         # Keep the most recent timestamp for this followed pubkey
-                        if pk not in followed_map or ts > followed_map[pk]:
-                            followed_map[pk] = ts
+                        if pk_str not in followed_map or ts > followed_map[pk_str]:
+                            followed_map[pk_str] = ts
 
             # Return followed pubkeys sorted by the most recent time they appeared (desc)
             sorted_followed = sorted(followed_map.items(), key=lambda x: x[1])
@@ -114,10 +127,7 @@ class NostrManager:
         if not authors:
             return []
 
-        # Limit authors to avoid filter too large errors
-        # Many relays reject filters with more than a few hundred authors
-        authors = authors[:250]
-
+        # Parse public keys
         public_keys = []
         for author in authors:
             try:
@@ -128,16 +138,34 @@ class NostrManager:
         if not public_keys:
             return []
 
-        f = Filter().kind(Kind(1)).authors(public_keys).limit(limit)
+        # Chunk authors to avoid filters that are too large for relays
+        # (many relays reject filters with more than a few hundred authors)
+        chunk_size = 250
+        all_events = []
+        for i in range(0, len(public_keys), chunk_size):
+            chunk = public_keys[i:i + chunk_size]
+            f = Filter().kind(Kind(1)).authors(chunk).limit(limit)
+            if until:
+                f = f.until(Timestamp.from_secs(until))
+            try:
+                events = await self.client.fetch_events(ReqTarget.auto([f]), timedelta(seconds=5))
+                all_events.extend(events)
+            except Exception as e:
+                print(f"Error fetching feed chunk: {e}")
+                continue
 
-        if until:
-            f = f.until(Timestamp.from_secs(until))
-
-        events = await self.client.fetch_events(f, timedelta(seconds=5))
-
-        enriched = await self._enrich_events(events.to_vec())
+        enriched = await self._enrich_events(all_events)
         with_parents = await self._enrich_with_parents(enriched)
-        return with_parents
+        # Deduplicate and sort by created_at desc, then apply limit
+        seen = set()
+        deduped = []
+        for e in with_parents:
+            if e.get("id") in seen:
+                continue
+            seen.add(e.get("id"))
+            deduped.append(e)
+        deduped.sort(key=lambda x: x.get("created_at", 0), reverse=True)
+        return deduped[:limit]
 
     async def get_events(self, event_ids: List[str]) -> Dict[str, dict]:
         await self.start()
@@ -156,10 +184,10 @@ class NostrManager:
             return {}
 
         f = Filter().ids(ids)
-        events = await self.client.fetch_events(f, timedelta(seconds=5))
+        events = await self.client.fetch_events(ReqTarget.auto([f]), timedelta(seconds=5))
 
         results = {}
-        for e in events.to_vec():
+        for e in events:
             results[e.id().to_hex()] = self._event_to_dict(e)
 
         return results
@@ -230,8 +258,8 @@ class NostrManager:
             if until:
                 f = f.until(Timestamp.from_secs(until))
 
-            events = await self.client.fetch_events(f, timedelta(seconds=5))
-            enriched = await self._enrich_events(events.to_vec())
+            events = await self.client.fetch_events(ReqTarget.auto([f]), timedelta(seconds=5))
+            enriched = await self._enrich_events(events)
             with_parents = await self._enrich_with_parents(enriched)
             return with_parents
         except Exception as e:
@@ -269,8 +297,7 @@ class NostrManager:
 
             # Fetch events tagging either this post or the root
             f = Filter().kind(Kind(1)).events([eid, rid]).limit(500)
-            thread_events_vec = await self.client.fetch_events(f, timedelta(seconds=5))
-            thread_events = thread_events_vec.to_vec()
+            thread_events = await self.client.fetch_events(ReqTarget.auto([f]), timedelta(seconds=5))
 
             # Enrich all authors
             for e in thread_events:
@@ -338,8 +365,7 @@ class NostrManager:
             return main_post, []
 
     async def publish_note(self, content: str, keys: Keys, reply_to_id: Optional[str] = None):
-        signer = NostrSigner.keys(keys)
-        pub_client = Client(signer)
+        pub_client = Client()
         for relay in self.relays:
             await pub_client.add_relay(RelayUrl.parse(relay))
         try:
@@ -353,14 +379,14 @@ class NostrManager:
                 parent_id = EventId.parse(reply_to_id)
                 # Fetch parent to find root and author
                 f = Filter().id(parent_id)
-                events = await self.client.fetch_events(f, timedelta(seconds=5))
-                if events.len() > 0:
-                    parent_event = events.to_vec()[0]
-                    parent_tags = parent_event.tags().to_vec()
+                events = await self.client.fetch_events(ReqTarget.auto([f]), timedelta(seconds=5))
+                if len(events) > 0:
+                    parent_event = events[0]
+                    parent_tags = parent_event.tags()
 
                     root_id = None
                     for tag in parent_tags:
-                        t = tag.as_vec()
+                        t = tag.to_vec()
                         if len(t) >= 2 and t[0] == "e":
                             # If there's already an 'e' tag, it might be the root
                             # NIP-10: first 'e' tag is root, last is reply
@@ -381,7 +407,7 @@ class NostrManager:
             except Exception as e:
                 print(f"Error preparing reply tags: {e}")
 
-        event = EventBuilder.text_note(content).tags(tags).sign_with_keys(keys)
+        event = EventBuilder(Kind(1), content).tags(tags).finalize(keys)
         try:
             await pub_client.send_event(event)
             print("Published note")
@@ -402,13 +428,13 @@ class NostrManager:
         user_pubkey = keys.public_key().to_hex()
         pk = PublicKey.parse(user_pubkey)
         f = Filter().kind(Kind(3)).author(pk)
-        events = await self.client.fetch_events(f, timedelta(seconds=10))
+        events = await self.client.fetch_events(ReqTarget.auto([f]), timedelta(seconds=10))
 
         tags = []
         content = ""
-        if events.len() > 0:
-            latest_event = max(events.to_vec(), key=lambda e: e.created_at().as_secs())
-            tags = latest_event.tags().to_vec()
+        if len(events) > 0:
+            latest_event = max(events, key=lambda e: e.created_at().as_secs())
+            tags = latest_event.tags()
             content = latest_event.content()
             print(f"Found existing contact list with {len(tags)} tags")
         else:
@@ -417,7 +443,7 @@ class NostrManager:
         # Check if already following
         already_following = False
         for tag in tags:
-            t = tag.as_vec()
+            t = tag.to_vec()
             if len(t) >= 2 and t[0] == "p" and t[1] == follow_pubkey_hex:
                 already_following = True
                 break
@@ -427,14 +453,12 @@ class NostrManager:
             print(f"Added p-tag for {follow_pubkey_hex}")
 
             # Publish updated contact list
-            # Publish updated contact list
-            signer = NostrSigner.keys(keys)
-            pub_client = Client(signer)
+            pub_client = Client()
             for relay in self.relays:
                 await pub_client.add_relay(RelayUrl.parse(relay))
             await pub_client.connect()
 
-            event = EventBuilder(Kind(3), content).tags(tags).sign_with_keys(keys)
+            event = EventBuilder(Kind(3), content).tags(tags).finalize(keys)
             await pub_client.send_event(event)
             print("Published follow event")
             await pub_client.disconnect()
@@ -453,21 +477,21 @@ class NostrManager:
         user_pubkey = keys.public_key().to_hex()
         pk = PublicKey.parse(user_pubkey)
         f = Filter().kind(Kind(3)).author(pk)
-        events = await self.client.fetch_events(f, timedelta(seconds=10))
+        events = await self.client.fetch_events(ReqTarget.auto([f]), timedelta(seconds=10))
 
-        if events.len() == 0:
+        if len(events) == 0:
             print("No contact list found to unfollow from")
             return # Nothing to unfollow from
 
-        latest_event = max(events.to_vec(), key=lambda e: e.created_at().as_secs())
-        old_tags = latest_event.tags().to_vec()
+        latest_event = max(events, key=lambda e: e.created_at().as_secs())
+        old_tags = latest_event.tags()
         content = latest_event.content()
         print(f"Found existing contact list with {len(old_tags)} tags")
 
         new_tags = []
         found = False
         for tag in old_tags:
-            t = tag.as_vec()
+            t = tag.to_vec()
             if len(t) >= 2 and t[0] == "p" and t[1] == unfollow_pubkey_hex:
                 found = True
                 continue
@@ -476,13 +500,12 @@ class NostrManager:
         if found:
             print(f"Removed p-tag for {unfollow_pubkey_hex}")
             # Publish updated contact list
-            signer = NostrSigner.keys(keys)
-            pub_client = Client(signer)
+            pub_client = Client()
             for relay in self.relays:
                 await pub_client.add_relay(RelayUrl.parse(relay))
             await pub_client.connect()
 
-            event = EventBuilder(Kind(3), content).tags(new_tags).sign_with_keys(keys)
+            event = EventBuilder(Kind(3), content).tags(new_tags).finalize(keys)
             await pub_client.send_event(event)
             print("Published unfollow event")
             await pub_client.disconnect()
@@ -504,12 +527,12 @@ class NostrManager:
             # Fetch Kind 3 events (contact lists) that tag this user
             f = Filter().kind(Kind(3)).pubkey(pk).limit(500) # Limit to 500 followers for performance
 
-            events = await self.client.fetch_events(f, timedelta(seconds=10))
-            print(f"Found {events.len()} potential follower contact list events")
+            events = await self.client.fetch_events(ReqTarget.auto([f]), timedelta(seconds=10))
+            print(f"Found {len(events)} potential follower contact list events")
 
             # Group events by author and find the latest for each
             author_events = {}
-            for event in events.to_vec():
+            for event in events:
                 author = event.author().to_hex()
                 if author not in author_events:
                     author_events[author] = event
@@ -523,9 +546,9 @@ class NostrManager:
 
             followers = []
             for author, event in author_events.items():
-                tags = event.tags().to_vec()
+                tags = event.tags()
                 for tag in tags:
-                    t = tag.as_vec()
+                    t = tag.to_vec()
                     if len(t) >= 2 and t[0] == "p" and t[1] == pubkey_hex:
                         # include tuple of (author, timestamp)
                         followers.append((author, event.created_at().as_secs()))
@@ -555,10 +578,10 @@ class NostrManager:
             if until:
                 f = f.until(Timestamp.from_secs(until))
 
-            events = await self.client.fetch_events(f, timedelta(seconds=5))
+            events = await self.client.fetch_events(ReqTarget.auto([f]), timedelta(seconds=5))
 
             # Enrich with author profiles
-            enriched = await self._enrich_events(events.to_vec())
+            enriched = await self._enrich_events(events)
             with_parents = await self._enrich_with_parents(enriched)
             return with_parents
         except Exception as e:
@@ -602,10 +625,10 @@ class NostrManager:
         f = Filter().kind(Kind(0)).authors(pks)
 
         # We don't need history, just latest, but relays might send multiples.
-        events = await self.client.fetch_events(f, timedelta(seconds=5))
+        events = await self.client.fetch_events(ReqTarget.auto([f]), timedelta(seconds=5))
 
         # Sort by created_at ascending so we overwrite with newer data
-        sorted_events = sorted(events.to_vec(), key=lambda x: x.created_at().as_secs())
+        sorted_events = sorted(events, key=lambda x: x.created_at().as_secs())
 
         for event in sorted_events:
             try:

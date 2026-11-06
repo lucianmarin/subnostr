@@ -51,9 +51,25 @@ async def user_feed(request: Request, until: Optional[int] = None):
     try:
         pubkey = ctx["user_pubkey"]
         following = await nostr_manager.get_following_list(pubkey)
-        following.append(pubkey)
 
-        events = await nostr_manager.get_feed(following, limit=20, until=until)
+        # Fetch followed users and the user's own posts separately so that
+        # the user's own posts are not crowded out by very active followed
+        # accounts (or dropped when the following list is very large).
+        others = [p for p in following if p != pubkey]
+
+        events_others = await nostr_manager.get_feed(others, limit=20, until=until)
+        events_self = await nostr_manager.get_user_posts(pubkey, limit=20, until=until)
+
+        # Merge, deduplicate and sort by created_at descending
+        seen = set()
+        merged = []
+        for e in (events_self or []) + (events_others or []):
+            if e.get("id") in seen:
+                continue
+            seen.add(e.get("id"))
+            merged.append(e)
+        merged.sort(key=lambda x: x.get("created_at", 0), reverse=True)
+        events = merged[:20]
 
         next_until = None
         if events:

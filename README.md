@@ -1,5 +1,7 @@
 # Subnostr
 
+![screenshot](screenshot.jpg)
+
 Subnostr is a small, lightweight web frontend for browsing and interacting with Nostr relays. It provides a simple timeline, user profiles, follow/unfollow management, posting, and basic thread/reply views.
 
 Features
