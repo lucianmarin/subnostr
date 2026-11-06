@@ -42,6 +42,3 @@ Notes
 
 Contributing
 - Pull requests and issues welcome. Run linters/tests before opening a PR.
-
-License
-- See the `LICENSE` file.
